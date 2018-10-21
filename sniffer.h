@@ -135,6 +135,66 @@ struct udp_protocol{
     b16 sum;
 };
 
+/* DNS header
+ *
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |           0           |           1           |           2           |           3           |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |              ID                               |QR|  OP_CODE  |AA|TC|RD|RA|Z |AD|CD|  RT_CODE  |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                     NUM_Q                     |                    NUM_ANSW                   |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                    NUM_AUTH                   |                    NUM_ADDT                   |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                                       QUESTIONS [...]                                         |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                                        ANSWERS [...]                                          |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                                       AUTHORITY [...]                                         |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                                      ADDITIONAL [...]                                         |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *
+ *  ID      - identification for matching request and response
+ *  QR      - request/response
+ *  OP_CODE - query type (0 = standart query, 1 = inverse query)
+ *  AA      - authoritative answer (1 = authoritative)
+ *  TC      - truncated (1 = truncated)
+ *  RD      - recursion desired (1 = desired)
+ *  RA      - recursion available (1 = available)
+ *  Z       -
+ *  AD      - authenticated data (1 = authenticated)
+ *  CD      - checking disabled (1 = disabled)
+ *  RT_CODE - return Code:
+ *      0 = No error
+ *      1 = Format error
+ *      2 = Server failure
+ *      3 = Name error
+ *      4 = Not implemented
+ *      5 = Refused
+ *      ...
+ *
+ *  NUM_Q       - number of total questions
+ *  NUM_ANSW    - number of total answers
+ *  NUM_AUTH    - number of total authority
+ *  NUM_ADDT    - number of total additional
+ *  QUESTIONS [...]     - 0 or more Query structures
+ *  ANSWERS [...]       - 0 or more Answer structures
+ *  AUTHORITY [...]     - 0 or more Authority structures
+ *  ADDITIONAL [...]    - 0 or more Additional structures
+ *
+ */
+
+/*
+ *  Query
+ *      - list of 0 or more Query structures
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |           0           |           1           |           2           |           3           |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |              ID                               |QR|  OP_CODE  |AA|TC|RD|RA|Z |AD|CD|  RT_CODE  |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *
+ */
 
 int sniff(char* dev, int timeout);
 

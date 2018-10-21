@@ -150,6 +150,7 @@ int process_upd_header(const b8 *packet) {
     DEBUG_DATAGRAM_PRINT("UDP");
     DEBUG_PRINT("SRC", ntohs(udp->src));
     DEBUG_PRINT("DEST", ntohs(udp->dst));
+    DEBUG_PRINT("LEN", ntohs(udp->len));
 
     return 0;
 }
