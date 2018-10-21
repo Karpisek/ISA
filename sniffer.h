@@ -6,19 +6,21 @@
 #define ISA_SNIFFER_H
 
 #define ERR_INTERFACE_OPEN 1            /* couldn't open device */
-
-#define FILTER_EXPRESSION "port 53"      /* The filter expression */
+#define FILTER_EXPRESSION "port 53"     /* The filter expression port DNS */
 
 #define ERR_ETHERNET_HEADERS 2          /* device doesn't provide Ethernet headers */
 #define STR_ERR_ETHERNET_HEADERS "Selected device doesn't provide Ethernet headers - not supported"
 
+#define DEBUG_PRINT(info, data)         (std::cout << "\t" << info << ": " << data << std::endl)
+#define DEBUG_DATAGRAM_PRINT(header)    (std::cout << "---------------- " << header  << std::endl)
+
 #include <unistd.h>
 #include <signal.h>
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
 #include <sstream>
 #include <pcap.h>
-#include <time.h>
+#include <ctime>
 #include <string>
 #include <netinet/if_ether.h>
 #include <arpa/inet.h>
@@ -92,7 +94,7 @@ struct ethernet_protocol {
  *  DST -    IPv4 destination address
  * */
 
-#define IP_HEAD_LEN(ip)          (((ip)->ver_ihl) & 0b00001111) * 4 /* extract ip header length from IHL */
+#define IP_HEAD_LEN(ip)          ((((ip)->ver_ihl) & 0b00001111) * 4) /* extract ip header length from IHL */
 #define IP_VERSION(ip)           (((ip)->ver_ihl) >> 4)             /* extract ip version length from IHL */
 #define PRT_UDP 17  /* UDP protocol decimal code for PRT according to RFC 1700 */
 #define PRT_TCP 6   /* TCP protocol decimal code for PRT according to RFC 1700 */
@@ -127,10 +129,10 @@ struct ip4_protocol {
  */
 
 struct udp_protocol{
-    b8 src[2];
-    b8 dst[2];
-    b8 len[2];
-    b8 sum[2];
+    b16 src;
+    b16 dst;
+    b16 len;
+    b16 sum;
 };
 
 
@@ -144,8 +146,8 @@ int process_ip4_header(const b8 *packet);
 int process_ip6_header(const b8 *packet);
 
 /* L3 header processing */
-int process_ip4_header(const b8 *packet);
-int process_ip6_header(const b8 *packet);
+int process_upd_header(const b8 *packet);
+int process_tcp_header(const b8 *packet);
 
 /* L4 header processing */
 

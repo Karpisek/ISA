@@ -76,14 +76,14 @@ int process_ether_header(const unsigned char *packet) {
     ethernet = (struct ethernet_protocol *) packet;
 
     // ### DEBUG PRINT ###
-    std::cout << "-------------------" << std::endl;
-    std::cout << "DEST: " << ether_ntoa((const struct ether_addr *) ethernet->mac_dest) << std::endl;
-    std::cout << "SRC: " << ether_ntoa((const struct ether_addr *) ethernet->mac_host) << std::endl;
-    // ### DEBUG PRINT ###
+    std::cout << std::endl << std::endl;
+    DEBUG_DATAGRAM_PRINT("Ethernet");
+    DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_dest));
+    DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_host));
 
     // TODO: rozvetveni na ip6 header
 
-    if(ntohs (ethernet->type) == ETHER_TYPE_IP4) {
+    if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
         process_ip4_header(packet + ETHERNET_HEADER_LEN);
     }
     else if(ntohs (ethernet->type) == ETHER_TYPE_IP6) {
@@ -95,7 +95,7 @@ int process_ip4_header(const b8 *packet) {
     const struct ip4_protocol *ip;              /* Ip header       */
 
     /* typecast ip header */
-    ip = (struct ip4_protocol*)(packet);
+    ip = (struct ip4_protocol*) packet;
 
 
     if(IP_HEAD_LEN(ip) < 20) {
@@ -103,28 +103,31 @@ int process_ip4_header(const b8 *packet) {
     }
 
     /* ## DEBUG print IP dest address */
+    DEBUG_DATAGRAM_PRINT("IP");
     char buf[INET_ADDRSTRLEN];
     if(inet_ntop(AF_INET, &ip->dst, buf, INET_ADDRSTRLEN) != nullptr) {
-        std::cout << "DEST: " << buf << std::endl;
+        DEBUG_PRINT("SRC", buf);
     } else {
         raise(12);
     }
 
     // print IP src address
     if(inet_ntop(AF_INET, &ip->src, buf, INET_ADDRSTRLEN) != nullptr) {
-        std::cout << "SRC: " << buf << std::endl;
+        DEBUG_PRINT("DEST", buf);
     } else {
         raise(12);
     }
 
-    printf("size of ip: %d, protocol version: %d\n", IP_HEAD_LEN(ip), IP_VERSION(ip));
-    // ######
+    DEBUG_PRINT("size", IP_HEAD_LEN(ip));
+    DEBUG_PRINT("version", IP_VERSION(ip));
 
     switch(ip->prt) {
         case PRT_UDP:
+            process_upd_header(packet + IP_HEAD_LEN(ip));
             break;
 
         case PRT_TCP:
+            process_tcp_header(packet);
             break;
 
         default:
@@ -136,5 +139,22 @@ int process_ip4_header(const b8 *packet) {
 
 int process_ip6_header(const b8 *packet) {
     raise(42, "IPv6 datagram not implemented");
+    return 0;
+}
+
+int process_upd_header(const b8 *packet) {
+    const struct udp_protocol *udp;     /* UDP header */
+
+    udp = (const struct udp_protocol *) packet;
+
+    DEBUG_DATAGRAM_PRINT("UDP");
+    DEBUG_PRINT("SRC", ntohs(udp->src));
+    DEBUG_PRINT("DEST", ntohs(udp->dst));
+
+    return 0;
+}
+
+int process_tcp_header(const b8 *packet) {
+    raise(42, "tcp datagram not implemented");
     return 0;
 }
