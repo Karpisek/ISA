@@ -57,11 +57,12 @@ typedef unsigned char b8;
  *  TYPE/LEN -  if under 1500 its len, if more it determinate which protocol is used
  *  SUM -       checksum
  *  */
-struct ethernet_protocol {
+
+typedef struct ethernet_protocol {
     b8 mac_dest[MAC_ADDR_LEN];     /* destination host address */
     b8 mac_host[MAC_ADDR_LEN];     /* source host address */
     b16 type;                      /* IP? ARP? RARP? 802.1Q... TODO */
-};
+} ethernet_protocol;
 
 /* IPv4 header
  *  +---------------------------------------------------------------+
@@ -99,7 +100,7 @@ struct ethernet_protocol {
 #define PRT_UDP 17  /* UDP protocol decimal code for PRT according to RFC 1700 */
 #define PRT_TCP 6   /* TCP protocol decimal code for PRT according to RFC 1700 */
 
-struct ip4_protocol {
+typedef struct ip4_protocol {
     b8 ver_ihl;
     b8 type;
     b8 len[2];
@@ -110,7 +111,7 @@ struct ip4_protocol {
     b8 hsum[2];
     b8 src[IP4_ADDR_LEN];
     b8 dst[IP4_ADDR_LEN];
-};
+} ip4_protocol;
 
 /* UDP header
  *  +---------------------------------------------------------------+
@@ -257,6 +258,19 @@ typedef struct rr_question {
  */
 
 #define RESOURCE_RECORD_NAME_OFFSET 2
+
+#define DNS_CLASS_IN    1
+
+#define DNS_TYPE_A      1
+#define DNS_TYPE_AAAA   28
+#define DNS_TYPE_CNAME  5
+#define DNS_TYPE_MX     15
+// #define DNS_TYPE_MS
+#define DNS_TYPE_SOA    6
+#define DNS_TYPE_TXT    16
+// #define DNS_TYPE_SPF
+
+
 typedef struct rr_record {
     std::string qname;
     b16 type;
@@ -266,20 +280,21 @@ typedef struct rr_record {
 } rr_record;
 
 int sniff(char* dev, int timeout);
+void process_packet(const b8 *packet);
 
 /* L1 header processing */
-int process_ether_header(const b8 *packet);
+int process_ether_header(const b8 **packet);
 
 /* L2 header processing */
-int process_ip4_header(const b8 *packet);
-int process_ip6_header(const b8 *packet);
+int process_ip4_header(const b8 **packet);
+int process_ip6_header(const b8 **packet);
 
 /* L3 header processing */
-int process_upd_header(const b8 *packet);
-int process_tcp_header(const b8 *packet);
+int process_upd_header(const b8 **packet);
+int process_tcp_header(const b8 **packet);
 
 /* L4 header processing */
-int process_dns_header(const b8 *packet);
+int process_dns_header(const b8 **packet);
 
 rr_question* get_query_record(const b8 **packet);
 rr_record* get_answers_record(const b8 **packet, const b8 *dns_datagram_start);

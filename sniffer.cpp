@@ -3,7 +3,6 @@
 //
 
 #include "sniffer.h"
-#include "input.h"
 
 // TODO: timeout just callbacks to print !!! viz forum
 
@@ -59,7 +58,7 @@ int sniff(char *dev, int duration) {
         packet = pcap_next(session, &header);
 
         if(packet != nullptr) {
-            process_ether_header(packet);
+            process_packet(packet);
         }
     }
 
@@ -70,12 +69,28 @@ int sniff(char *dev, int duration) {
     return 0;
 }
 
-int process_ether_header(const unsigned char *packet) {
+void process_packet(const b8 *packet) {
+    /* L1 */
+    process_ether_header(&packet);
+    packet += ETHERNET_HEADER_LEN;
 
-    const struct ethernet_protocol *ethernet;   /* Ethernet header */
+    /* L2 */
+    if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
+        process_ip4_header(packet);
+    }
+    else if(ntohs (ethernet->type) == ETHER_TYPE_IP6) {
+        process_ip6_header(packet);
+    }
+
+    /* L3 */
+}
+
+int process_ether_header(const unsigned char **packet) {
+
+    ethernet_protocol *ethernet;   /* Ethernet header */
 
     /* typecast ethernet header */
-    ethernet = (struct ethernet_protocol *) packet;
+    ethernet = (ethernet_protocol *) *packet;
 
     // ### DEBUG PRINT ###
     std::cout << std::endl << std::endl;
@@ -83,20 +98,14 @@ int process_ether_header(const unsigned char *packet) {
     DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_dest));
     DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_host));
 
-
-    if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
-        process_ip4_header(packet + ETHERNET_HEADER_LEN);
-    }
-    else if(ntohs (ethernet->type) == ETHER_TYPE_IP6) {
-        process_ip6_header(packet + ETHERNET_HEADER_LEN);
-    }
+    return 0;
 }
 
-int process_ip4_header(const b8 *packet) {
-    const struct ip4_protocol *ip;              /* Ip header       */
+int process_ip4_header(const b8 **packet) {
+    ip4_protocol *ip;              /* Ip header       */
 
     /* typecast ip header */
-    ip = (struct ip4_protocol*) packet;
+    ip = (ip4_protocol *) *packet;
 
 
     if(IP_HEAD_LEN(ip) < 20) {
@@ -276,7 +285,42 @@ rr_record *get_answers_record(const b8 **packet, const b8 *dns_datagram_start) {
     DEBUG_PRINT("ttl", ntohl(answer->ttl));
     DEBUG_PRINT("len", htons(answer->len));
 
-    *packet += htons(answer->len);
+    switch (htons(answer->qclass)) {
+        case DNS_CLASS_IN:
+            switch (htons(answer->type)) {
+
+                case DNS_TYPE_A:
+                    printf("TYPE A");
+                    break;
+
+                case DNS_TYPE_AAAA:
+                    break;
+
+                case DNS_TYPE_CNAME:
+                    break;
+
+                case DNS_TYPE_MX:
+                    break;
+
+                case DNS_TYPE_SOA:
+                    break;
+
+                case DNS_TYPE_TXT:
+                    break;
+
+                default:
+                    raise(128, "unsupported DNS rr_record TYPE");
+
+            }
+            break;
+
+        default:
+            raise(128, "unsupported DNS rr_record CLASS");
+    }
+
+
+    //jump over data
+    //*packet += htons(answer->len);
 
 }
 
@@ -308,4 +352,5 @@ std::string get_name(const b8 **packet) {
 
     return name;
 }
+
 
