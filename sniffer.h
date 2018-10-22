@@ -220,13 +220,10 @@ typedef struct dns_header {
  *
  */
 
-// TODO ...
-
 typedef struct rr_question {
-    b16 _length;
+    std::string qname;
     b16 type;
     b16 qclass;
-    b8 *qname;
 } rr_question;
 
 /*
@@ -235,9 +232,7 @@ typedef struct rr_question {
  *  +-----------+-----------+-----------------------+
  *  |           0           |           1           |
  *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
- *  |                                               |
- *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ RNAME ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
- *  |                                               |
+ *  | 1| 1|            NAME_OFFSET                  |
  *  +-----------------------------------------------+
  *  |                     TYPE                      |
  *  +-----------------------------------------------+
@@ -247,16 +242,28 @@ typedef struct rr_question {
  *  +   -   -   -   -   -   -   -   -   -   -   -   +
  *  |                      TTL                      |
  *  +-----------------------------------------------+
+ *  |                      LEN                      |
+ *  +-----------------------------------------------+
  *  |                     DATA                      |
  *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
  *
- *  RNAME   - sequence of labels each has Len in octets and followed in octets
+ *  NAME_OFFSET   - points to first occurance of NAME in DNS datagram
  *  TYPE    - type of DNS record
  *  CLASS   - class of DNS record
  *  TTL     - time to live
+ *  LEN     - length of data
  *  DATA    - received record data
  *
  */
+
+#define RESOURCE_RECORD_NAME_OFFSET 2
+typedef struct rr_record {
+    std::string qname;
+    b16 type;
+    b16 qclass;
+    b32 ttl;
+    b16 len;
+} rr_record;
 
 int sniff(char* dev, int timeout);
 
@@ -274,7 +281,10 @@ int process_tcp_header(const b8 *packet);
 /* L4 header processing */
 int process_dns_header(const b8 *packet);
 
-rr_question get_labeled_name(const b8 *packet);
+rr_question* get_query_record(const b8 **packet);
+rr_record* get_answers_record(const b8 **packet, const b8 *dns_datagram_start);
+
+std::string get_name(const b8 **packet);
 
 #endif //ISA_SNIFFER_H
 

@@ -167,7 +167,9 @@ int process_tcp_header(const b8 *packet) {
 
 int process_dns_header(const b8 *packet) {
     const dns_header *dns;   /* DNS header */
+    const b8* dns_datagram_start;
 
+    dns_datagram_start = packet;
     dns = (const dns_header *) packet;
 
     DEBUG_DATAGRAM_PRINT("DNS");
@@ -193,14 +195,15 @@ int process_dns_header(const b8 *packet) {
     DEBUG_DATAGRAM_PRINT("Questions");
     for(int i = 0; i < n_ques; i++) {
 
-        rr_question record = get_labeled_name(packet);
+        rr_question *question = get_query_record(&packet);
+        std::cout << question->qname << " " << ntohs(question->qclass) << " " << ntohs(question->type) << std::endl;
     }
 
     /* loop over answers */
 
     DEBUG_DATAGRAM_PRINT("Answers");
     for(int i = 0; i < n_answ; i++) {
-
+        rr_record *record = get_answers_record(&packet, dns_datagram_start);
     }
 
     /* loop over authorities */
@@ -220,20 +223,89 @@ int process_dns_header(const b8 *packet) {
     return 0;
 }
 
-rr_question get_labeled_name(const b8 *packet) {
+// TODO: Free mem !!!
+rr_question* get_query_record(const b8 **packet) {
 
-    rr_question *new_question;
-    new_question = (rr_question *) malloc(sizeof(rr_question));
+    rr_question *question;
+    question = (rr_question *) malloc(sizeof(rr_question));
 
+    question->qname = get_name(packet);
 
-    int next_label_size = *packet;
-    packet += sizeof(b8);
+    question->type = *(b16 *) *packet;
+    *packet += sizeof(question->type);
 
-    new_question->qname = (b8 *) malloc(next_label_size * sizeof(b8));
+    question->qclass = *(b16 *) *packet;
+    *packet += sizeof(question->qclass);
 
+    return question;
+}
 
+//TODO: free malloc !!!
+rr_record *get_answers_record(const b8 **packet, const b8 *dns_datagram_start) {
+    rr_record *answer;
 
-    std::cout << next_label_size << std::endl;
-    std::cout << std::hex << *packet << std::endl;
+    answer = (rr_record *) malloc(sizeof(rr_record));
+
+    /*
+     * NAME is stored in shortened format, first two bits are '1' rest is integer representing offset in octets from
+     * DNS datagram start
+     */
+    int offset = htons(*(b16 *) *packet) & 0b0011111111111111;
+
+    const b8 *name_start = dns_datagram_start + offset;
+
+    answer->qname = get_name(&name_start);
+
+    *packet += RESOURCE_RECORD_NAME_OFFSET;
+
+    answer->type = *(b16 *) *packet;
+    *packet += sizeof(answer->type);
+
+    answer->qclass = *(b16 *) *packet;
+    *packet += sizeof(answer->qclass);
+
+    answer->ttl = *(b32 *) *packet;
+    *packet += sizeof(answer->ttl);
+
+    answer->len = *(b16 *) *packet;
+    *packet += sizeof(answer->len);
+
+    DEBUG_DATAGRAM_PRINT(answer->qname);
+    DEBUG_PRINT("type", htons(answer->type));
+    DEBUG_PRINT("class", htons(answer->qclass));
+    DEBUG_PRINT("ttl", ntohl(answer->ttl));
+    DEBUG_PRINT("len", htons(answer->len));
+
+    *packet += htons(answer->len);
+
+}
+
+// TODO: free malloc !!!
+std::string get_name(const b8 **packet) {
+
+    std::string name;
+
+    int next_label_size = **packet;
+    *packet += sizeof(b8);
+
+    while(next_label_size != 0) {
+
+        /* add characters to output string in range of defined label */
+        for(int i = 0; i < next_label_size; i++) {
+            name += **packet;
+            (*packet)++;
+        }
+
+        next_label_size = **packet;
+        *packet += sizeof(b8);
+
+        /* add '.' between labels */
+        if(next_label_size > 0) {
+            name += '.';
+        }
+
+    }
+
+    return name;
 }
 
