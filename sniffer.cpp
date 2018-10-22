@@ -5,6 +5,8 @@
 #include "sniffer.h"
 #include "input.h"
 
+// TODO: timeout just callbacks to print !!! viz forum
+
 int sniff(char *dev, int duration) {
 
     pcap_t *session;                        /* Session handle */
@@ -81,7 +83,6 @@ int process_ether_header(const unsigned char *packet) {
     DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_dest));
     DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_host));
 
-    // TODO: rozvetveni na ip6 header
 
     if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
         process_ip4_header(packet + ETHERNET_HEADER_LEN);
@@ -137,6 +138,7 @@ int process_ip4_header(const b8 *packet) {
     return 0;
 }
 
+// TODO: ip6 header
 int process_ip6_header(const b8 *packet) {
     raise(42, "IPv6 datagram not implemented");
     return 0;
@@ -152,10 +154,86 @@ int process_upd_header(const b8 *packet) {
     DEBUG_PRINT("DEST", ntohs(udp->dst));
     DEBUG_PRINT("LEN", ntohs(udp->len));
 
-    return 0;
+    process_dns_header(packet + UDP_HEAD_LEN);
 }
 
+// TODO: tcp_header
 int process_tcp_header(const b8 *packet) {
+    DEBUG_DATAGRAM_PRINT("TCP");
+
     raise(42, "tcp datagram not implemented");
     return 0;
 }
+
+int process_dns_header(const b8 *packet) {
+    const dns_header *dns;   /* DNS header */
+
+    dns = (const dns_header *) packet;
+
+    DEBUG_DATAGRAM_PRINT("DNS");
+    DEBUG_PRINT("ID", ntohs(dns->identification));
+
+    DEBUG_PRINT("Q_NUM", ntohs(dns->questions_number));
+    int n_ques = ntohs(dns->questions_number);
+
+    DEBUG_PRINT("ANSW_NUM", ntohs(dns->answers_number));
+    int n_answ = ntohs(dns->answers_number);
+
+    DEBUG_PRINT("AUTH_NUM", ntohs(dns->authorities_number));
+    int n_auth = ntohs(dns->authorities_number);
+
+    DEBUG_PRINT("ADD_NUM", ntohs(dns->additions_number));
+    int n_adds = ntohs(dns->additions_number);
+
+
+    packet += DNS_HEAD_LEN;
+
+    /* loop over questions */
+
+    DEBUG_DATAGRAM_PRINT("Questions");
+    for(int i = 0; i < n_ques; i++) {
+
+        rr_question record = get_labeled_name(packet);
+    }
+
+    /* loop over answers */
+
+    DEBUG_DATAGRAM_PRINT("Answers");
+    for(int i = 0; i < n_answ; i++) {
+
+    }
+
+    /* loop over authorities */
+
+    DEBUG_DATAGRAM_PRINT("Authorities");
+    for(int i = 0; i < n_auth; i++) {
+
+    }
+
+    /* loop over additions */
+
+    DEBUG_DATAGRAM_PRINT("Additions");
+    for(int i = 0; i < n_adds; i++) {
+
+    }
+
+    return 0;
+}
+
+rr_question get_labeled_name(const b8 *packet) {
+
+    rr_question *new_question;
+    new_question = (rr_question *) malloc(sizeof(rr_question));
+
+
+    int next_label_size = *packet;
+    packet += sizeof(b8);
+
+    new_question->qname = (b8 *) malloc(next_label_size * sizeof(b8));
+
+
+
+    std::cout << next_label_size << std::endl;
+    std::cout << std::hex << *packet << std::endl;
+}
+

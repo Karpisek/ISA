@@ -123,10 +123,12 @@ struct ip4_protocol {
  *
  *  SRC - source port
  *  DST - destination port
- *  LEN - UDP length + UPD data length
+ *  LEN - UDP length + UDP data length
  *  SUM - checksum of UDP header and UDP data, IPv4 optional (zeros when unused) IPv6 mandatory
  *
  */
+
+#define UDP_HEAD_LEN 8  /* length of udp header in octets */
 
 struct udp_protocol{
     b16 src;
@@ -137,23 +139,23 @@ struct udp_protocol{
 
 /* DNS header
  *
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  +-----------------------+-----------------------+-----------------------+-----------------------+
  *  |           0           |           1           |           2           |           3           |
  *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
  *  |              ID                               |QR|  OP_CODE  |AA|TC|RD|RA|Z |AD|CD|  RT_CODE  |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  +-----------------------------------------------+--+-----------+--+--+--+--+--+--+--+-----------+
  *  |                     NUM_Q                     |                    NUM_ANSW                   |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  +-----------------------------------------------+-----------------------------------------------+
  *  |                    NUM_AUTH                   |                    NUM_ADDT                   |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  +-----------------------------------------------+-----------------------------------------------+
  *  |                                       QUESTIONS [...]                                         |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  +-----------------------------------------------------------------------------------------------+
  *  |                                        ANSWERS [...]                                          |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  +-----------------------------------------------------------------------------------------------+
  *  |                                       AUTHORITY [...]                                         |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  +-----------------------------------------------------------------------------------------------+
  *  |                                      ADDITIONAL [...]                                         |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  +-----------------------------------------------------------------------------------------------+
  *
  *  ID      - identification for matching request and response
  *  QR      - request/response
@@ -178,21 +180,81 @@ struct udp_protocol{
  *  NUM_ANSW    - number of total answers
  *  NUM_AUTH    - number of total authority
  *  NUM_ADDT    - number of total additional
- *  QUESTIONS [...]     - 0 or more Query structures
- *  ANSWERS [...]       - 0 or more Answer structures
- *  AUTHORITY [...]     - 0 or more Authority structures
- *  ADDITIONAL [...]    - 0 or more Additional structures
+ *  QUESTIONS [...]     - 0 or more Question structures
+ *  ANSWERS [...]       - 0 or more Resource Record structures
+ *  AUTHORITY [...]     - 0 or more Resource Record structures
+ *  ADDITIONAL [...]    - 0 or more Resource Record structures
  *
  */
 
+#define DNS_HEAD_LEN 12
+
+typedef struct dns_header {
+    b16 identification;
+    b8 qr_opcode_aa_tc_rd;
+    b8 ra_z_ad_cd_rtcode;
+    b16 questions_number;
+    b16 answers_number;
+    b16 authorities_number;
+    b16 additions_number;
+} dns_header;
+
 /*
- *  Query
- *      - list of 0 or more Query structures
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
- *  |           0           |           1           |           2           |           3           |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
- *  |              ID                               |QR|  OP_CODE  |AA|TC|RD|RA|Z |AD|CD|  RT_CODE  |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  Question
+ *
+ *  +-----------------------+-----------------------+
+ *  |           0           |           1           |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                                               |
+ *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ QNAME ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ *  |                                               |
+ *  +-----------------------------------------------+
+ *  |                     TYPE                      |
+ *  +-----------------------------------------------+
+ *  |                     QCLASS                    |
+ *  +-----------------------------------------------+
+ *
+ *  QNAME - sequence of labels each has Len in octets and followed in octets
+ *  TYPE - type of DNS record
+ *  QCLASS - class of DNS record
+ *
+ */
+
+// TODO ...
+
+typedef struct rr_question {
+    b16 _length;
+    b16 type;
+    b16 qclass;
+    b8 *qname;
+} rr_question;
+
+/*
+ *  Resource Record
+ *
+ *  +-----------+-----------+-----------------------+
+ *  |           0           |           1           |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  |                                               |
+ *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ RNAME ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ *  |                                               |
+ *  +-----------------------------------------------+
+ *  |                     TYPE                      |
+ *  +-----------------------------------------------+
+ *  |                     CLASS                     |
+ *  +-----------------------------------------------+
+ *  |                      TTL                      |
+ *  +   -   -   -   -   -   -   -   -   -   -   -   +
+ *  |                      TTL                      |
+ *  +-----------------------------------------------+
+ *  |                     DATA                      |
+ *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ *
+ *  RNAME   - sequence of labels each has Len in octets and followed in octets
+ *  TYPE    - type of DNS record
+ *  CLASS   - class of DNS record
+ *  TTL     - time to live
+ *  DATA    - received record data
  *
  */
 
@@ -210,7 +272,9 @@ int process_upd_header(const b8 *packet);
 int process_tcp_header(const b8 *packet);
 
 /* L4 header processing */
+int process_dns_header(const b8 *packet);
 
+rr_question get_labeled_name(const b8 *packet);
 
 #endif //ISA_SNIFFER_H
 
