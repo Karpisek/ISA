@@ -70,22 +70,49 @@ int sniff(char *dev, int duration) {
 }
 
 void process_packet(const b8 *packet) {
+    const b8* dns_datagram_start;
+
+    ethernet_protocol* ethernet;
+    ip4_protocol* ip4;
+    udp_protocol* udp;
+    dns_protocol* dns;
+
     /* L1 */
-    process_ether_header(&packet);
+    ethernet = process_ether_header(&packet);
     packet += ETHERNET_HEADER_LEN;
 
     /* L2 */
     if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
-        process_ip4_header(packet);
+        ip4 = process_ip4_header(packet);
+        packet += IP_HEAD_LEN(ip4);
+
     }
-    else if(ntohs (ethernet->type) == ETHER_TYPE_IP6) {
+    else if (ntohs (ethernet->type) == ETHER_TYPE_IP6) {
         process_ip6_header(packet);
+        ip4 = nullptr;
     }
 
     /* L3 */
+    switch(ip4->prt) {
+        case PRT_UDP:
+            udp = process_upd_header(packet);
+            packet += UDP_HEAD_LEN;
+            break;
+
+        case PRT_TCP:
+            process_tcp_header(packet);
+            break;
+
+        default:
+            raise(123, "Error, not UDP nor TCP");
+    }
+
+    /* L4 */
+    dns_datagram_start = packet;
+    dns = process_dns(packet);
 }
 
-int process_ether_header(const unsigned char **packet) {
+ethernet_protocol* process_ether_header(const unsigned char **packet) {
 
     ethernet_protocol *ethernet;   /* Ethernet header */
 
@@ -98,14 +125,14 @@ int process_ether_header(const unsigned char **packet) {
     DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_dest));
     DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_host));
 
-    return 0;
+    return ethernet;
 }
 
-int process_ip4_header(const b8 **packet) {
+ip4_protocol* process_ip4_header(const b8 *packet) {
     ip4_protocol *ip;              /* Ip header       */
 
     /* typecast ip header */
-    ip = (ip4_protocol *) *packet;
+    ip = (ip4_protocol *) packet;
 
 
     if(IP_HEAD_LEN(ip) < 20) {
@@ -131,20 +158,7 @@ int process_ip4_header(const b8 **packet) {
     DEBUG_PRINT("size", IP_HEAD_LEN(ip));
     DEBUG_PRINT("version", IP_VERSION(ip));
 
-    switch(ip->prt) {
-        case PRT_UDP:
-            process_upd_header(packet + IP_HEAD_LEN(ip));
-            break;
-
-        case PRT_TCP:
-            process_tcp_header(packet);
-            break;
-
-        default:
-            raise(123, "Error, not UDP nor TCP");
-    }
-
-    return 0;
+    return ip;
 }
 
 // TODO: ip6 header
@@ -153,17 +167,15 @@ int process_ip6_header(const b8 *packet) {
     return 0;
 }
 
-int process_upd_header(const b8 *packet) {
-    const struct udp_protocol *udp;     /* UDP header */
+udp_protocol* process_upd_header(const b8 *packet) {
+    udp_protocol *udp;     /* UDP header */
 
-    udp = (const struct udp_protocol *) packet;
+    udp = (udp_protocol *) packet;
 
     DEBUG_DATAGRAM_PRINT("UDP");
     DEBUG_PRINT("SRC", ntohs(udp->src));
     DEBUG_PRINT("DEST", ntohs(udp->dst));
     DEBUG_PRINT("LEN", ntohs(udp->len));
-
-    process_dns_header(packet + UDP_HEAD_LEN);
 }
 
 // TODO: tcp_header
@@ -174,62 +186,91 @@ int process_tcp_header(const b8 *packet) {
     return 0;
 }
 
-int process_dns_header(const b8 *packet) {
-    const dns_header *dns;   /* DNS header */
+dns_protocol* process_dns(const b8 *packet) {
+    dns_protocol *dns;              /* DNS protocol */
+    dns_header *header;             /* DNS header */
+    dns_body *body;                 /* DNS body */
     const b8* dns_datagram_start;
 
-    dns_datagram_start = packet;
-    dns = (const dns_header *) packet;
+    /* allocation memory for dns_protocol structure */
+    dns = (dns_protocol *) malloc(sizeof(dns_protocol));
 
-    DEBUG_DATAGRAM_PRINT("DNS");
-    DEBUG_PRINT("ID", ntohs(dns->identification));
-
-    DEBUG_PRINT("Q_NUM", ntohs(dns->questions_number));
-    int n_ques = ntohs(dns->questions_number);
-
-    DEBUG_PRINT("ANSW_NUM", ntohs(dns->answers_number));
-    int n_answ = ntohs(dns->answers_number);
-
-    DEBUG_PRINT("AUTH_NUM", ntohs(dns->authorities_number));
-    int n_auth = ntohs(dns->authorities_number);
-
-    DEBUG_PRINT("ADD_NUM", ntohs(dns->additions_number));
-    int n_adds = ntohs(dns->additions_number);
-
-
+    /* pointing to dns_header */
+    dns->header = get_dns_header(packet);
     packet += DNS_HEAD_LEN;
 
-    /* loop over questions */
+    DEBUG_DATAGRAM_PRINT("DNS");
+    DEBUG_PRINT("ID", ntohs(dns->header->identification));
 
-    DEBUG_DATAGRAM_PRINT("Questions");
-    for(int i = 0; i < n_ques; i++) {
+    DEBUG_PRINT("Q_NUM", ntohs(dns->header->questions_number));
+    int n_ques = ntohs(dns->header->questions_number);
 
-        rr_question *question = get_query_record(&packet);
-        std::cout << question->qname << " " << ntohs(question->qclass) << " " << ntohs(question->type) << std::endl;
-    }
+    DEBUG_PRINT("ANSW_NUM", ntohs(dns->header->answers_number));
+    int n_answ = ntohs(dns->header->answers_number);
 
-    /* loop over answers */
+    DEBUG_PRINT("AUTH_NUM", ntohs(dns->header->authorities_number));
+    int n_auth = ntohs(dns->header->authorities_number);
 
-    DEBUG_DATAGRAM_PRINT("Answers");
-    for(int i = 0; i < n_answ; i++) {
-        rr_record *record = get_answers_record(&packet, dns_datagram_start);
-    }
+    DEBUG_PRINT("ADD_NUM", ntohs(dns->header->additions_number));
+    int n_adds = ntohs(dns->header->additions_number);
 
     /* loop over authorities */
 
-    DEBUG_DATAGRAM_PRINT("Authorities");
+    //DEBUG_DATAGRAM_PRINT("Authorities");
     for(int i = 0; i < n_auth; i++) {
 
     }
 
     /* loop over additions */
 
-    DEBUG_DATAGRAM_PRINT("Additions");
+    //DEBUG_DATAGRAM_PRINT("Additions");
     for(int i = 0; i < n_adds; i++) {
 
     }
 
-    return 0;
+
+
+    dns->body = get_dns_body(&packet, dns->header);
+
+    return dns;
+}
+
+dns_header* get_dns_header(const b8 *packet) {
+    return (dns_header *) packet;
+}
+
+//  Free mem !!!
+dns_body* get_dns_body(const b8 **packet, dns_header *header) {
+    dns_body *body;
+
+    body = (dns_body *) malloc(sizeof(dns_body));
+
+    /* allocates memory for all question pointers */
+    int ques_num = ntohs(header->questions_number);
+    body->questions = (rr_question *) malloc(ques_num * sizeof(rr_question));
+
+    /* loop over questions */
+    DEBUG_DATAGRAM_PRINT("Questions");
+    for(int i = 0; i < ques_num; i++) {
+
+        body->questions = get_query_record(packet);
+        std::cout << body->questions->qname << " " << ntohs(body->questions->qclass) << " " << ntohs(body->questions->type) << std::endl;
+
+        body->questions++;
+    }
+
+
+    /* allocates memory for all answer pointers */
+    int answ_num = ntohs(header->answers_number);
+    body->records = (rr_record *) malloc(answ_num * sizeof(rr_record));
+
+    /* loop over answers */
+
+    DEBUG_DATAGRAM_PRINT("Answers");
+    for(int i = 0; i < answ_num; i++) {
+        body->records = get_answers_record(packet, (const b8 *)header);
+        body->records++;
+    }
 }
 
 // TODO: Free mem !!!
@@ -252,6 +293,7 @@ rr_question* get_query_record(const b8 **packet) {
 //TODO: free malloc !!!
 rr_record *get_answers_record(const b8 **packet, const b8 *dns_datagram_start) {
     rr_record *answer;
+    a_rdata* record;
 
     answer = (rr_record *) malloc(sizeof(rr_record));
 
@@ -259,7 +301,7 @@ rr_record *get_answers_record(const b8 **packet, const b8 *dns_datagram_start) {
      * NAME is stored in shortened format, first two bits are '1' rest is integer representing offset in octets from
      * DNS datagram start
      */
-    int offset = htons(*(b16 *) *packet) & 0b0011111111111111;
+    int offset = ntohs(*(b16 *) *packet) & 0b0011111111111111;
 
     const b8 *name_start = dns_datagram_start + offset;
 
@@ -290,7 +332,8 @@ rr_record *get_answers_record(const b8 **packet, const b8 *dns_datagram_start) {
             switch (htons(answer->type)) {
 
                 case DNS_TYPE_A:
-                    printf("TYPE A");
+                    record = get_a_record(*packet);
+                    //*packet += RDATA_A_LEN;
                     break;
 
                 case DNS_TYPE_AAAA:
@@ -309,18 +352,20 @@ rr_record *get_answers_record(const b8 **packet, const b8 *dns_datagram_start) {
                     break;
 
                 default:
-                    raise(128, "unsupported DNS rr_record TYPE");
+                    break;
+                    //raise(128, "unsupported DNS rr_record TYPE");
 
             }
             break;
 
         default:
-            raise(128, "unsupported DNS rr_record CLASS");
+            break;
+            //raise(128, "unsupported DNS rr_record CLASS");
     }
 
 
     //jump over data
-    //*packet += htons(answer->len);
+    *packet += ntohs(answer->len);
 
 }
 
@@ -351,6 +396,10 @@ std::string get_name(const b8 **packet) {
     }
 
     return name;
+}
+
+a_rdata *get_a_record(const b8 *packet) {
+    return (a_rdata *) packet;
 }
 
 

@@ -27,6 +27,9 @@
 
 #include "error.h"
 
+struct rr_question;
+struct rr_record;
+
 /* Typedefs for better readability */
 typedef unsigned int b32;
 typedef unsigned short b16;
@@ -131,12 +134,12 @@ typedef struct ip4_protocol {
 
 #define UDP_HEAD_LEN 8  /* length of udp header in octets */
 
-struct udp_protocol{
+typedef struct udp_protocol{
     b16 src;
     b16 dst;
     b16 len;
     b16 sum;
-};
+} udp_protocol;
 
 /* DNS header
  *
@@ -199,6 +202,17 @@ typedef struct dns_header {
     b16 authorities_number;
     b16 additions_number;
 } dns_header;
+
+typedef struct dns_body {
+    rr_question* questions;
+    rr_record* records;
+} dns_body;
+
+typedef struct dns_protocol {
+    dns_header* header;
+    dns_body* body;
+} dns_protocol;
+
 
 /*
  *  Question
@@ -279,27 +293,50 @@ typedef struct rr_record {
     b16 len;
 } rr_record;
 
+/*
+ * A RDATA
+ *
+ *  +---------------------------------------------------------------+
+ *  |       0       |       1       |       2       |       3       |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                             ADDRESS                           |
+ *  +-------------------------------+-------------------------------+
+ *
+ *  ADDRESS - 32 bit Internet address
+ *
+ */
+
+#define RDATA_A_LEN 4
+
+typedef struct a_rdata{
+    b8 address[IP4_ADDR_LEN];
+} a_rdata;
+
 int sniff(char* dev, int timeout);
 void process_packet(const b8 *packet);
 
 /* L1 header processing */
-int process_ether_header(const b8 **packet);
+ethernet_protocol* process_ether_header(const b8 **packet);
 
 /* L2 header processing */
-int process_ip4_header(const b8 **packet);
-int process_ip6_header(const b8 **packet);
+ip4_protocol* process_ip4_header(const b8 *packet);
+int process_ip6_header(const b8 *packet);
 
 /* L3 header processing */
-int process_upd_header(const b8 **packet);
-int process_tcp_header(const b8 **packet);
+udp_protocol* process_upd_header(const b8 *packet);
+int process_tcp_header(const b8 *packet);
 
 /* L4 header processing */
-int process_dns_header(const b8 **packet);
+dns_protocol* process_dns(const b8 *packet);
+dns_header* get_dns_header(const b8 *packet);
+dns_body* get_dns_body(const b8 **packet, dns_header *header);
 
 rr_question* get_query_record(const b8 **packet);
 rr_record* get_answers_record(const b8 **packet, const b8 *dns_datagram_start);
 
 std::string get_name(const b8 **packet);
+
+a_rdata* get_a_record(const b8 *packet);
 
 #endif //ISA_SNIFFER_H
 
