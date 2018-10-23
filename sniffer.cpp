@@ -115,7 +115,7 @@ void process_packet(const b8 *packet) {
 
     DEBUG_DATAGRAM_PRINT("Answers");
     for(int i = 0; i < dns->header->answers_number; i++) {
-        std::cout << dns->body->records[i]->qname << " " << dns->body->records[i]->qclass << " " << dns->body->records[i]->type << std::endl;
+        std::cout << dns->body->answers[i]->qname << " " << dns->body->answers[i]->qclass << " " << dns->body->answers[i]->type << std::endl;
     }
 }
 
@@ -251,11 +251,11 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
 
     /* allocates memory for all answer pointers */
     int answ_num = header->answers_number;
-    body->records = (rr_record **) malloc(answ_num * sizeof(rr_record *));
+    body->answers = (rr_answer **) malloc(answ_num * sizeof(rr_record *));
 
     /* loop over answers */
     for(int i = 0; i < answ_num; i++) {
-        body->records[i] = get_answers_record(packet, header->raw_header);
+        body->answers[i] = get_answers_record(packet, header->raw_header);
     }
 
     return body;
@@ -279,11 +279,11 @@ rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
 }
 
 //TODO: free malloc !!!
-rr_record *get_answers_record(const b8 **packet, raw_dns_header *header) {
-    rr_record *answer;
-    a_rdata* record;
+rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
+    rr_answer *answer;
+    rr_record* record;
 
-    answer = (rr_record *) malloc(sizeof(rr_record));
+    answer = (rr_answer *) malloc(sizeof(rr_answer));
 
     /*
      * NAME is stored in shortened format, first two bits are '1' rest is integer representing offset in octets from
@@ -312,13 +312,14 @@ rr_record *get_answers_record(const b8 **packet, raw_dns_header *header) {
     DEBUG_PRINT("len", htons(answer->len));
     */
 
-    switch (htons(answer->qclass)) {
+
+    switch (answer->qclass) {
         case DNS_CLASS_IN:
-            switch (htons(answer->type)) {
+            switch (answer->type) {
 
                 case DNS_TYPE_A:
-                    //record = get_a_record(*packet);
-                    //*packet += RDATA_A_LEN;
+                    DEBUG_PRINT("AAAAAAAAA", get_a_record(*packet)->data.A->ip4);
+
                     break;
 
                 case DNS_TYPE_AAAA:
@@ -386,8 +387,31 @@ std::string get_name(const b8 **packet, raw_dns_header *header) {
 
 }
 
-a_rdata *get_a_record(const b8 *packet) {
-    return (a_rdata *) packet;
+// TODO: free mem !!!
+rr_record* get_a_record(const b8 *packet) {
+    char buf[INET_ADDRSTRLEN];
+    rr_data data;
+    a_record *record;
+
+    record = (a_record *) malloc(sizeof(a_record));
+
+    record->ip4 = inet_ntop(AF_INET, (b32 *)packet, buf, INET_ADDRSTRLEN);
+
+    data.A = record;
+
+    return create_rr_record(data, A);
+}
+
+// TODO: free mem !!!
+rr_record* create_rr_record(rr_data data, rr_tag tag) {
+    rr_record* new_data;
+
+    new_data = (rr_record *) malloc(sizeof(rr_record));
+
+    new_data->type = tag;
+    new_data->data = data;
+
+    return new_data;
 }
 
 

@@ -28,7 +28,7 @@
 #include "error.h"
 
 struct rr_question;
-struct rr_record;
+struct rr_answer;
 
 /* Typedefs for better readability */
 typedef unsigned int b32;
@@ -214,7 +214,7 @@ typedef struct dns_header {
 
 typedef struct dns_body {
     rr_question** questions;
-    rr_record** records;
+    rr_answer** answers;
 } dns_body;
 
 typedef struct dns_protocol {
@@ -294,13 +294,13 @@ typedef struct rr_question {
 // #define DNS_TYPE_SPF
 
 
-typedef struct rr_record {
+typedef struct rr_answer {
     std::string qname;
     int type;
     int qclass;
     int ttl;
     int len;
-} rr_record;
+} rr_answer;
 
 /*
  * A RDATA
@@ -315,11 +315,65 @@ typedef struct rr_record {
  *
  */
 
-#define RDATA_A_LEN 4
+typedef struct {
+    std::string ip4;
+} a_record;
 
-typedef struct a_rdata{
-    b8 address[IP4_ADDR_LEN];
-} a_rdata;
+// TODO AAAA
+typedef struct {
+} aaaa_record;
+
+// TODO CNAME
+typedef struct {
+} cname_record;
+
+// TODO MX
+typedef struct {
+} mx_record;
+
+// TODO MS
+typedef struct {
+} ms_record;
+
+// TODO SOA
+typedef struct {
+} soa_record;
+
+// TODO TXT
+typedef struct {
+} txt_record;
+
+// TODO SPF
+typedef struct {
+} spf_record;
+
+typedef union rr_data {
+    a_record* A;
+    aaaa_record* AAAA;
+    cname_record* CNAME;
+    mx_record* MX;
+    ms_record* MS;
+    soa_record* SOA;
+    txt_record* TXT;
+    spf_record* SPF;
+} rr_data;
+
+typedef enum rr_tag {
+    A,
+    AAAA,
+    CNAME,
+    MX,
+    MS,
+    SOA,
+    TXT,
+    SPF,
+} rr_tag;
+
+typedef struct rr_record {
+    rr_tag type;
+    rr_data data;
+} rr_record;
+
 
 int sniff(char* dev, int timeout);
 void process_packet(const b8 *packet);
@@ -341,11 +395,13 @@ dns_header* get_dns_header(const b8 *packet);
 dns_body* get_dns_body(const b8 **packet, dns_header *header);
 
 rr_question* get_query_record(const b8 **packet, raw_dns_header *header);
-rr_record* get_answers_record(const b8 **packet, raw_dns_header *header);
+rr_answer* get_answers_record(const b8 **packet, raw_dns_header *header);
 
 std::string get_name(const b8 **packet, raw_dns_header *header);
 
-a_rdata* get_a_record(const b8 *packet);
+rr_record *get_a_record(const b8 *packet);
+
+rr_record* create_rr_record(rr_data data, rr_tag tag);
 
 #endif //ISA_SNIFFER_H
 
