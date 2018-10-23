@@ -204,8 +204,8 @@ typedef struct dns_header {
 } dns_header;
 
 typedef struct dns_body {
-    rr_question* questions;
-    rr_record* records;
+    rr_question** questions;
+    rr_record** records;
 } dns_body;
 
 typedef struct dns_protocol {
