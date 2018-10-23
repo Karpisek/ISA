@@ -70,8 +70,6 @@ int sniff(char *dev, int duration) {
 }
 
 void process_packet(const b8 *packet) {
-    const b8* dns_datagram_start;
-
     ethernet_protocol* ethernet;
     ip4_protocol* ip4;
     udp_protocol* udp;
@@ -108,8 +106,17 @@ void process_packet(const b8 *packet) {
     }
 
     /* L4 */
-    dns_datagram_start = packet;
     dns = process_dns(packet);
+
+    DEBUG_DATAGRAM_PRINT("Questions");
+    for(int i = 0; i < dns->header->questions_number; i++) {
+        std::cout << dns->body->questions[i]->qname << " " << dns->body->questions[i]->qclass << " " << dns->body->questions[i]->type << std::endl;
+    }
+
+    DEBUG_DATAGRAM_PRINT("Answers");
+    for(int i = 0; i < dns->header->answers_number; i++) {
+        std::cout << dns->body->records[i]->qname << " " << dns->body->records[i]->qclass << " " << dns->body->records[i]->type << std::endl;
+    }
 }
 
 ethernet_protocol* process_ether_header(const unsigned char **packet) {
@@ -197,41 +204,31 @@ dns_protocol* process_dns(const b8 *packet) {
     dns->header = get_dns_header(packet);
     packet += DNS_HEAD_LEN;
 
-
-    /* loop over authorities */
-
-    //DEBUG_DATAGRAM_PRINT("Authorities");
-    for(int i = 0; i < n_auth; i++) {
-
-    }
-
-    /* loop over additions */
-
-    //DEBUG_DATAGRAM_PRINT("Additions");
-    for(int i = 0; i < n_adds; i++) {
-
-    }
-
-
-
+    /* receiving dns_body */
     dns->body = get_dns_body(&packet, dns->header);
-
-
-    DEBUG_DATAGRAM_PRINT("Questions");
-    for(int i = 0; i < ntohs(dns->header->questions_number); i++) {
-        std::cout << dns->body->questions[i]->qname << " " << ntohs(dns->body->questions[i]->qclass) << " " << ntohs(dns->body->questions[i]->type) << std::endl;
-    }
-
-    DEBUG_DATAGRAM_PRINT("Answers");
-    for(int i = 0; i < ntohs(dns->header->answers_number); i++) {
-        std::cout << dns->body->records[i]->qname << " " << ntohs(dns->body->records[i]->qclass) << " " << ntohs(dns->body->records[i]->type) << std::endl;
-    }
 
     return dns;
 }
 
+// todo free mem
 dns_header* get_dns_header(const b8 *packet) {
-    return (dns_header *) packet;
+    raw_dns_header *raw_header;
+    dns_header *header;
+
+    raw_header = (raw_dns_header *)packet;
+
+    if((header = (dns_header *) malloc(sizeof(dns_header))) == nullptr){
+        raise(1234, "Malloc error");
+    }
+
+    header->raw_header = raw_header;
+    header->identification = ntohs(raw_header->identification);
+    header->questions_number = ntohs(raw_header->questions_number);
+    header->answers_number = ntohs(raw_header->answers_number);
+    header->additions_number = ntohs(raw_header->additions_number);
+    header->authorities_number = ntohs(raw_header->authorities_number);
+
+    return header;
 }
 
 //  TODO Free mem !!!
@@ -241,49 +238,48 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
     body = (dns_body *) malloc(sizeof(dns_body));
 
     /* allocates memory for all question pointers */
-    int ques_num = ntohs(header->questions_number);
-
+    int ques_num = header->questions_number;
     if((body->questions = (rr_question **) malloc(ques_num *sizeof(rr_question *))) == nullptr) {
         raise(1234, "Malloc error");
     }
 
     /* loop over questions */
     for(int i = 0; i < ques_num; i++) {
-        body->questions[i] = get_query_record(packet);
+        body->questions[i] = get_query_record(packet, header->raw_header);
     }
 
 
     /* allocates memory for all answer pointers */
-    int answ_num = ntohs(header->answers_number);
+    int answ_num = header->answers_number;
     body->records = (rr_record **) malloc(answ_num * sizeof(rr_record *));
 
     /* loop over answers */
     for(int i = 0; i < answ_num; i++) {
-        body->records[i] = get_answers_record(packet, (const b8 *)header);
+        body->records[i] = get_answers_record(packet, header->raw_header);
     }
 
     return body;
 }
 
 // TODO: Free mem !!!
-rr_question* get_query_record(const b8 **packet) {
+rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
 
     rr_question *question;
     question = (rr_question *) malloc(sizeof(rr_question));
 
-    question->qname = get_name(packet);
+    question->qname = get_name(packet, header);
 
-    question->type = *(b16 *) *packet;
-    *packet += sizeof(question->type);
+    question->type = htons(*(b16 *) *packet);
+    *packet += sizeof(b16);
 
-    question->qclass = *(b16 *) *packet;
-    *packet += sizeof(question->qclass);
+    question->qclass = htons(*(b16 *) *packet);
+    *packet += sizeof(b16);
 
     return question;
 }
 
 //TODO: free malloc !!!
-rr_record *get_answers_record(const b8 **packet, const b8 *dns_datagram_start) {
+rr_record *get_answers_record(const b8 **packet, raw_dns_header *header) {
     rr_record *answer;
     a_rdata* record;
 
@@ -293,25 +289,20 @@ rr_record *get_answers_record(const b8 **packet, const b8 *dns_datagram_start) {
      * NAME is stored in shortened format, first two bits are '1' rest is integer representing offset in octets from
      * DNS datagram start
      */
-    int offset = ntohs(*(b16 *) *packet) & 0b0011111111111111;
-
-    const b8 *name_start = dns_datagram_start + offset;
-
-    answer->qname = get_name(&name_start);
-
+    answer->qname = get_name(packet, header);
     *packet += RESOURCE_RECORD_NAME_OFFSET;
 
-    answer->type = *(b16 *) *packet;
-    *packet += sizeof(answer->type);
+    answer->type = htons(*(b16 *) *packet);
+    *packet += sizeof(b16);
 
-    answer->qclass = *(b16 *) *packet;
-    *packet += sizeof(answer->qclass);
+    answer->qclass = htons(*(b16 *) *packet);
+    *packet += sizeof(b16);
 
-    answer->ttl = *(b32 *) *packet;
-    *packet += sizeof(answer->ttl);
+    answer->ttl = htonl(*(b32 *) *packet);
+    *packet += sizeof(b32);
 
-    answer->len = *(b16 *) *packet;
-    *packet += sizeof(answer->len);
+    answer->len = htons(*(b16 *) *packet);
+    *packet += sizeof(b16);
 
     /*
     DEBUG_DATAGRAM_PRINT(answer->qname);
@@ -359,38 +350,40 @@ rr_record *get_answers_record(const b8 **packet, const b8 *dns_datagram_start) {
 
 
     //jump over data
-    *packet += ntohs(answer->len);
+    *packet += answer->len;
 
     return answer;
 }
 
-// TODO: free malloc !!!
-std::string get_name(const b8 **packet) {
+std::string get_name(const b8 **packet, raw_dns_header *header) {
 
     std::string name;
+
+    if((ntohs(*(b16 *) *packet) & 0b1100000000000000) == 0b1100000000000000) {
+        int offset = ntohs(*(b16 *) *packet) & 0b0011111111111111;
+        const b8 *name_start = (const b8 *) header + offset;
+
+        return name + get_name(&name_start, header);
+    }
 
     int next_label_size = **packet;
     *packet += sizeof(b8);
 
-    while(next_label_size != 0) {
-
-        /* add characters to output string in range of defined label */
-        for(int i = 0; i < next_label_size; i++) {
-            name += **packet;
-            (*packet)++;
-        }
-
-        next_label_size = **packet;
-        *packet += sizeof(b8);
-
-        /* add '.' between labels */
-        if(next_label_size > 0) {
-            name += '.';
-        }
-
+    if(next_label_size == 0) {
+        return "";
     }
 
-    return name;
+
+    /* add characters to output string in range of defined label */
+    for(int i = 0; i < next_label_size; i++) {
+        name += **packet;
+        (*packet)++;
+    }
+
+    name += '.';
+
+    return name + get_name(packet, header);
+
 }
 
 a_rdata *get_a_record(const b8 *packet) {

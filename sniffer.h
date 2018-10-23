@@ -193,7 +193,7 @@ typedef struct udp_protocol{
 
 #define DNS_HEAD_LEN 12
 
-typedef struct dns_header {
+typedef struct raw_dns_header {
     b16 identification;
     b8 qr_opcode_aa_tc_rd;
     b8 ra_z_ad_cd_rtcode;
@@ -201,6 +201,15 @@ typedef struct dns_header {
     b16 answers_number;
     b16 authorities_number;
     b16 additions_number;
+}raw_dns_header;
+
+typedef struct dns_header {
+    raw_dns_header* raw_header;
+    int identification;
+    int questions_number;
+    int answers_number;
+    int authorities_number;
+    int additions_number;
 } dns_header;
 
 typedef struct dns_body {
@@ -237,8 +246,8 @@ typedef struct dns_protocol {
 
 typedef struct rr_question {
     std::string qname;
-    b16 type;
-    b16 qclass;
+    int type;
+    int qclass;
 } rr_question;
 
 /*
@@ -287,10 +296,10 @@ typedef struct rr_question {
 
 typedef struct rr_record {
     std::string qname;
-    b16 type;
-    b16 qclass;
-    b32 ttl;
-    b16 len;
+    int type;
+    int qclass;
+    int ttl;
+    int len;
 } rr_record;
 
 /*
@@ -331,10 +340,10 @@ dns_protocol* process_dns(const b8 *packet);
 dns_header* get_dns_header(const b8 *packet);
 dns_body* get_dns_body(const b8 **packet, dns_header *header);
 
-rr_question* get_query_record(const b8 **packet);
-rr_record* get_answers_record(const b8 **packet, const b8 *dns_datagram_start);
+rr_question* get_query_record(const b8 **packet, raw_dns_header *header);
+rr_record* get_answers_record(const b8 **packet, raw_dns_header *header);
 
-std::string get_name(const b8 **packet);
+std::string get_name(const b8 **packet, raw_dns_header *header);
 
 a_rdata* get_a_record(const b8 *packet);
 
