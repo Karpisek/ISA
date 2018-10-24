@@ -29,6 +29,7 @@
 
 struct rr_question;
 struct rr_answer;
+struct rr_record;
 
 /* Typedefs for better readability */
 typedef unsigned int b32;
@@ -37,7 +38,6 @@ typedef unsigned char b8;
 
 #define ETHERNET_HEADER_LEN 14
 #define MAC_ADDR_LEN 6
-#define IP4_ADDR_LEN 4
 #define ETHER_TYPE_IP4 0x0800
 #define ETHER_TYPE_IP6 0x86DD
 
@@ -98,6 +98,7 @@ typedef struct ethernet_protocol {
  *  DST -    IPv4 destination address
  * */
 
+#define IP4_ADDR_LEN 4
 #define IP_HEAD_LEN(ip)          ((((ip)->ver_ihl) & 0b00001111) * 4) /* extract ip header length from IHL */
 #define IP_VERSION(ip)           (((ip)->ver_ihl) >> 4)             /* extract ip version length from IHL */
 #define PRT_UDP 17  /* UDP protocol decimal code for PRT according to RFC 1700 */
@@ -115,6 +116,55 @@ typedef struct ip4_protocol {
     b8 src[IP4_ADDR_LEN];
     b8 dst[IP4_ADDR_LEN];
 } ip4_protocol;
+
+/* IPv6 header
+ *  +---------------------------------------------------------------+
+ *  |       0       |       1       |       2       |       3       |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |  VER  |     CLASS     |              FLOW                     |
+ *  +---------------+---------------+---------------+---------------+
+ *  |            PAYLOAD            |      NEXT     |      HOP      |
+ *  +-------------------------------+---------------+---------------+
+ *  |      TTL      |      PRT      |             HSUM              |
+ *  +---------------+---------------+-------------------------------+
+ *  |                              SRC                              |
+ *  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+ *  |                              SRC                              |
+ *  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+ *  |                              SRC                              |
+ *  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+ *  |                              SRC                              |
+ *  +---------------------------------------------------------------+
+ *  |                              DST                              |
+ *  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+ *  |                              DST                              |
+ *  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+ *  |                              DST                              |
+ *  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+ *  |                              DST                              |
+ *  +---------------------------------------------------------------+
+ *
+ *  VER     - version (constant 0110)
+ *  CLASS   - traffic class
+ *  FLOW    - hint for routers
+ *  PAYLOAD - length of payload
+ *  NEXT    - type of next header (may be extension)
+ *  HOP     - hop limit (like TTL in ip4)
+ *  SRC     - 128bit source address
+ *  DST     - 128bit destination address
+ */
+
+#define IP6_HEAD_LEN 40
+#define IP6_ADDR_LEN 16
+
+typedef struct ip6_protocol {
+    b32 ver_class_flow;
+    b16 payload;
+    b8  next;
+    b8  hop;
+    b8  src[IP6_ADDR_LEN];
+    b8  dst[IP6_ADDR_LEN];
+} ip6_protocol;
 
 /* UDP header
  *  +---------------------------------------------------------------+
@@ -229,9 +279,7 @@ typedef struct dns_protocol {
  *  +-----------------------+-----------------------+
  *  |           0           |           1           |
  *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
- *  |                                               |
  *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ QNAME ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
- *  |                                               |
  *  +-----------------------------------------------+
  *  |                     TYPE                      |
  *  +-----------------------------------------------+
@@ -268,8 +316,8 @@ typedef struct rr_question {
  *  +-----------------------------------------------+
  *  |                      LEN                      |
  *  +-----------------------------------------------+
- *  |                     DATA                      |
- *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ DATA~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ *  +-----------------------------------------------+
  *
  *  NAME_OFFSET   - points to first occurance of NAME in DNS datagram
  *  TYPE    - type of DNS record
@@ -288,7 +336,7 @@ typedef struct rr_question {
 #define DNS_TYPE_AAAA   28
 #define DNS_TYPE_CNAME  5
 #define DNS_TYPE_MX     15
-// #define DNS_TYPE_MS
+#define DNS_TYPE_NS     2
 #define DNS_TYPE_SOA    6
 #define DNS_TYPE_TXT    16
 // #define DNS_TYPE_SPF
@@ -300,6 +348,7 @@ typedef struct rr_answer {
     int qclass;
     int ttl;
     int len;
+    rr_record *record;
 } rr_answer;
 
 /*
@@ -308,43 +357,153 @@ typedef struct rr_answer {
  *  +---------------------------------------------------------------+
  *  |       0       |       1       |       2       |       3       |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                             ADDRESS                           |
+ *  |                            ADDRESS                            |
  *  +-------------------------------+-------------------------------+
  *
- *  ADDRESS - 32 bit Internet address
+ *  ADDRESS - 32 bit Internet IPv4 address
  *
  */
 
-typedef struct {
+typedef struct a_record{
     std::string ip4;
 } a_record;
 
-// TODO AAAA
-typedef struct {
+/*
+ * AAAA RDATA
+ *
+ *  +---------------------------------------------------------------+
+ *  |                            0 ... 18                           |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                            ADDRESS                            |
+ *  +-------------------------------+-------------------------------+
+ *
+ *  ADDRESS - 128 bit Internet IPv6 address
+ *
+ */
+
+typedef struct aaaa_record{
+    std::string ip6;
 } aaaa_record;
 
-// TODO CNAME
-typedef struct {
+/*
+ * CNAME RDATA
+ *
+ *  +---------------------------------------------------------------+
+ *  |                               ~                               |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                             CNAME                             |
+ *  +-------------------------------+-------------------------------+
+ *
+ *  CNAME - again name in labels
+ *
+ */
+
+typedef struct cname_record{
+    std::string cname;
 } cname_record;
 
-// TODO MX
-typedef struct {
+/*
+ * MX RDATA
+ *
+ *  +-------------------------------+
+ *  |       0       |       1       |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |              PREF             |
+ *  +-------------------------------+
+ *  ~ ~ ~ ~ ~ ~ ~EXCHANGE ~ ~ ~ ~ ~ ~
+ *  +-------------------------------+
+ *
+ *  PREFERENCE  - integer specifies the preference in compare to other RR. Lowest value is higher
+ *  EXCHANGE    - labels specifies a host willing to act as a mail exchange for the owner
+ *
+ */
+
+typedef struct mx_record{
+    int preference;
+    std::string exchange;
 } mx_record;
 
-// TODO MS
-typedef struct {
+/*
+ * NSNAME RDATA
+ *
+ *  +---------------------------------------------------------------+
+ *  |                               ~                               |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                             NSNAME                            |
+ *  +-------------------------------+-------------------------------+
+ *
+ *  NSNAME - name in labels specifies a host which should be authoritative
+ *
+ */
+
+typedef struct ns_record{
+    std::string nsname;
 } ms_record;
 
-// TODO SOA
-typedef struct {
+/*
+ * SOA RDATA
+ *
+ *  +---------------------------------------------------------------+
+ *  |       0       |       1       |       2       |       3       |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ MNNAME~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ *  +---------------------------------------------------------------+
+ *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ RNAME ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ *  +---------------------------------------------------------------+
+ *  |                             SERIAL                            |
+ *  +---------------+---------------+---------------+---------------+
+ *  |                            REFRESH                            |
+ *  +---------------+---------------+---------------+---------------+
+ *  |                             RETRY                             |
+ *  +---------------+---------------+---------------+---------------+
+ *  |                             EXPIRE                            |
+ *  +---------------+---------------+---------------+---------------+
+ *  |                            MINIMUM                            |
+ *  +---------------+---------------+---------------+---------------+
+ *
+ *  MNNAME  - domain name of the name server that was the original or primary source of data for this zone.
+ *  RNAME   - domain name which specifies the mailbox of the person responsible for this zone.
+ *  SERIAL  - version number of the original copy of the zone
+ *  REFRESH - time interval before the zone should be refreshed.
+ *  RETRY   - time interval that should elapse before a failed refresh should be retried.
+ *  EXPIRE  - time value that specifies the upper limit on
+ *            the time interval that can elapse before the zone is no
+ *            longer authoritative.
+ *  MINIMUM - minimum TTL field that should be exported with any RR from this zone.
+ *
+ */
+
+typedef struct soa_record{
+    std::string mnname;
+    std::string rname;
+    unsigned int serial;
+    unsigned int refresh;
+    unsigned int retry;
+    unsigned int expire;
+    unsigned int minimum;
 } soa_record;
 
-// TODO TXT
-typedef struct {
+/*
+ * TXT RDATA
+ *
+ *  +---------------------------------------------------------------+
+ *  |       0       |                ~                              |
+ *  +---------------+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |      LEN      |              TXT                              |
+ *  +---------------+---------------+---------------+---------------+
+ *
+ *  LEN - length of the TXT
+ *  TXT - characters
+ *
+ */
+
+typedef struct txt_record{
+    int length;
+    std::string text;
 } txt_record;
 
 // TODO SPF
-typedef struct {
+typedef struct spf_record{
 } spf_record;
 
 typedef union rr_data {
@@ -352,7 +511,7 @@ typedef union rr_data {
     aaaa_record* AAAA;
     cname_record* CNAME;
     mx_record* MX;
-    ms_record* MS;
+    ms_record* NS;
     soa_record* SOA;
     txt_record* TXT;
     spf_record* SPF;
@@ -363,7 +522,7 @@ typedef enum rr_tag {
     AAAA,
     CNAME,
     MX,
-    MS,
+    NS,
     SOA,
     TXT,
     SPF,
@@ -378,18 +537,18 @@ typedef struct rr_record {
 int sniff(char* dev, int timeout);
 void process_packet(const b8 *packet);
 
-/* L1 header processing */
+/* L2 header processing */
 ethernet_protocol* process_ether_header(const b8 **packet);
 
-/* L2 header processing */
-ip4_protocol* process_ip4_header(const b8 *packet);
-int process_ip6_header(const b8 *packet);
-
 /* L3 header processing */
+ip4_protocol* process_ip4_header(const b8 *packet);
+ip6_protocol* process_ip6_header(const b8 *packet);
+
+/* L4 header processing */
 udp_protocol* process_upd_header(const b8 *packet);
 int process_tcp_header(const b8 *packet);
 
-/* L4 header processing */
+/* L5 header processing */
 dns_protocol* process_dns(const b8 *packet);
 dns_header* get_dns_header(const b8 *packet);
 dns_body* get_dns_body(const b8 **packet, dns_header *header);
@@ -399,9 +558,15 @@ rr_answer* get_answers_record(const b8 **packet, raw_dns_header *header);
 
 std::string get_name(const b8 **packet, raw_dns_header *header);
 
-rr_record *get_a_record(const b8 *packet);
-
+/* records parsers */
 rr_record* create_rr_record(rr_data data, rr_tag tag);
+rr_record* get_a_record(const b8 *packet);
+rr_record* get_aaaa_record(const b8 *packet);
+rr_record* get_cname_record(const b8 *packet, raw_dns_header *header);
+rr_record* get_mx_record(const b8 *packet, raw_dns_header *header);
+rr_record* get_ns_record(const b8 *packet, raw_dns_header *header);
+rr_record* get_soa_record(const b8 *packet, raw_dns_header *header);
+rr_record* get_txt_record(const b8 *packet, raw_dns_header *header);
 
 #endif //ISA_SNIFFER_H
 
