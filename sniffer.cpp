@@ -6,17 +6,12 @@
 
 // TODO: timeout just callbacks to print !!! viz forum
 
-int sniff(char *dev, int duration) {
-
+pcap_t *init_interface(char *dev) {
     pcap_t *session;                        /* Session handle */
     char error_buffer[PCAP_ERRBUF_SIZE];    /* Error string */
     struct bpf_program filter_exp = {};		/* The compiled filter expression */
     b32 netmask;		                    /* The netmask of our sniffing device */
     b32 ip_address;                         /* The IP of our sniffing device */
-
-    const b8 *packet;                       /* Packet that pcap gives us */
-    struct pcap_pkthdr header = {};	        /* The header that pcap gives us */
-
 
     if (pcap_lookupnet(dev, &ip_address, &netmask, error_buffer) == -1) {
         fprintf(stderr, "Can't get netmask for device %s\n", dev);
@@ -30,6 +25,24 @@ int sniff(char *dev, int duration) {
     if (session == nullptr) {
         raise(ERR_INTERFACE_OPEN, std::string(error_buffer));
     }
+
+    return session;
+}
+
+pcap_t *init_file(char *filename) {
+
+}
+
+int sniff(pcap_t *session, int duration) {
+
+    char error_buffer[PCAP_ERRBUF_SIZE];    /* Error string */
+    struct bpf_program filter_exp = {};		/* The compiled filter expression */
+    b32 netmask;		                    /* The netmask of our sniffing device */
+    b32 ip_address;                         /* The IP of our sniffing device */
+
+    const b8 *packet;                       /* Packet that pcap gives us */
+    struct pcap_pkthdr header = {};	        /* The header that pcap gives us */
+
 
     /* make sure we're capturing on an Ethernet device */
     if (pcap_datalink(session) != DLT_EN10MB) {

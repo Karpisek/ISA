@@ -5,6 +5,7 @@
 #include "main.h"
 
 int main(int argc, char **argv) {
+    b32 ip
 
     argument interface = {false, 0};
     argument resource = {false, 0};
@@ -25,6 +26,10 @@ int main(int argc, char **argv) {
     /* starts sniffing on targeted device */
     if(interface.defined) {
         sniff(interface.value.str, timeout.value.i);
+    }
+
+    if(interface.defined) {
+
     }
 
 

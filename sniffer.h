@@ -533,6 +533,8 @@ typedef struct rr_record {
     rr_data data;
 } rr_record;
 
+pcap_t *init_interface(char *dev);
+pcap_t *init_file(char *filename);
 
 int sniff(char* dev, int timeout);
 void process_packet(const b8 *packet);
