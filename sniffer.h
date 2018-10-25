@@ -14,8 +14,8 @@
 #define DEBUG_PRINT(info, data)         (std::cout << "\t" << info << ": " << data << std::endl)
 #define DEBUG_DATAGRAM_PRINT(header)    (std::cout << "---------------- " << header  << std::endl)
 
-#include <unistd.h>
 #include <signal.h>
+#include <unistd.h>
 #include <cstdio>
 #include <iostream>
 #include <sstream>
@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 
 #include "error.h"
+#include "shared.h"
 
 struct rr_question;
 struct rr_answer;
@@ -533,10 +534,17 @@ typedef struct rr_record {
     rr_data data;
 } rr_record;
 
-pcap_t *init_interface(char *dev);
-pcap_t *init_file(char *filename);
+typedef struct sniff_handler {
+    pcap_t *session;
+    b32 ip_address;
+    b32 netmask;
+    char *dev;
+} sniff_handler;
 
-int sniff(char* dev, int timeout);
+sniff_handler *init_interface(char *dev);
+sniff_handler *init_file(char *filename);
+
+int sniff(sniff_handler *handler, int duration);
 void process_packet(const b8 *packet);
 
 /* L2 header processing */

@@ -7,6 +7,8 @@
 
 #include "input.h"
 #include "sniffer.h"
+#include "user_signal.h"
+#include "sender.h"
 
 int main(int argc, char **argv);
 

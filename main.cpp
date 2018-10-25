@@ -5,7 +5,11 @@
 #include "main.h"
 
 int main(int argc, char **argv) {
-    b32 ip
+
+    /* user signal registration */
+    signal(SIGUSR1, send_statistics);
+
+    sniff_handler *handler;
 
     argument interface = {false, 0};
     argument resource = {false, 0};
@@ -23,16 +27,20 @@ int main(int argc, char **argv) {
 
     debug_print_args(interface, resource, server, timeout);
 
+    if(server.defined) {
+        init_sender(server.value.str);
+    }
+
     /* starts sniffing on targeted device */
     if(interface.defined) {
-        sniff(interface.value.str, timeout.value.i);
+        handler = init_interface(interface.value.str);
+    } else if(resource.defined) {
+        handler = init_file(resource.value.str);
+    } else {
+        return 2222;
     }
 
-    if(interface.defined) {
-
-    }
-
-
+    sniff(handler, timeout.value.i);
 
 
     return 0;

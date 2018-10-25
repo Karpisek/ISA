@@ -6,43 +6,50 @@
 
 // TODO: timeout just callbacks to print !!! viz forum
 
-pcap_t *init_interface(char *dev) {
-    pcap_t *session;                        /* Session handle */
+sniff_handler *init_interface(char *dev) {
+    sniff_handler *handler;                 /* Session handle */
     char error_buffer[PCAP_ERRBUF_SIZE];    /* Error string */
-    struct bpf_program filter_exp = {};		/* The compiled filter expression */
-    b32 netmask;		                    /* The netmask of our sniffing device */
-    b32 ip_address;                         /* The IP of our sniffing device */
 
-    if (pcap_lookupnet(dev, &ip_address, &netmask, error_buffer) == -1) {
+    handler = (sniff_handler *) malloc(sizeof(sniff_handler));
+
+    handler->dev = dev;
+
+    if(pcap_lookupnet(dev, &handler->ip_address, &handler->netmask, error_buffer) == -1) {
         fprintf(stderr, "Can't get netmask for device %s\n", dev);
-
-        ip_address = 0;
-        netmask = 0;
     }
 
     /* opens live capture */
-    session = pcap_open_live(dev, BUFSIZ, 1, 1000, error_buffer);
-    if (session == nullptr) {
+    handler->session = pcap_open_live(dev, BUFSIZ, 1, 1000, error_buffer);
+    if(handler->session == nullptr) {
         raise(ERR_INTERFACE_OPEN, std::string(error_buffer));
     }
 
-    return session;
+    return handler;
 }
 
-pcap_t *init_file(char *filename) {
-
-}
-
-int sniff(pcap_t *session, int duration) {
-
+sniff_handler *init_file(char *filename) {
+    sniff_handler *handler;                 /* Session handle */
     char error_buffer[PCAP_ERRBUF_SIZE];    /* Error string */
-    struct bpf_program filter_exp = {};		/* The compiled filter expression */
-    b32 netmask;		                    /* The netmask of our sniffing device */
-    b32 ip_address;                         /* The IP of our sniffing device */
 
+    handler = (sniff_handler *) malloc(sizeof(sniff_handler));
+
+    handler->session = pcap_open_offline(filename, error_buffer);
+    if(handler->session == nullptr) {
+        raise(ERR_INTERFACE_OPEN, std::string(error_buffer));
+    }
+
+    return handler;
+}
+
+int sniff(sniff_handler *handler, int duration) {
+
+    struct bpf_program filter_exp = {};		/* The compiled filter expression */
     const b8 *packet;                       /* Packet that pcap gives us */
     struct pcap_pkthdr header = {};	        /* The header that pcap gives us */
 
+    char *dev = handler->dev;
+    pcap_t *session = handler->session;
+    b32 netmask = handler->netmask;
 
     /* make sure we're capturing on an Ethernet device */
     if (pcap_datalink(session) != DLT_EN10MB) {
@@ -51,7 +58,7 @@ int sniff(pcap_t *session, int duration) {
     }
 
     /* create sniff-filter */
-    if(pcap_compile(session, &filter_exp, FILTER_EXPRESSION, 0, ip_address) == -1) {
+    if(pcap_compile(session, &filter_exp, FILTER_EXPRESSION, 0, netmask) == -1) {
         fprintf(stderr, "Couldn't parse filter %s: %s\n", FILTER_EXPRESSION, pcap_geterr(session));
         return(2);
     }
@@ -231,7 +238,6 @@ ip4_protocol* process_ip4_header(const b8 *packet) {
     return ip;
 }
 
-// TODO: ip6 header
 ip6_protocol* process_ip6_header(const b8 *packet) {
     ip6_protocol *ip6;
 
@@ -326,7 +332,6 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
     if((body->questions = (rr_question **) malloc(ques_num *sizeof(rr_question *))) == nullptr) {
         raise(1234, "Malloc error");
     }
-
     /* loop over questions */
     for(int i = 0; i < ques_num; i++) {
         body->questions[i] = get_query_record(packet, header->raw_header);
@@ -386,59 +391,37 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
     answer->len = htons(*(b16 *) *packet);
     *packet += sizeof(b16);
 
-    /*
-    DEBUG_DATAGRAM_PRINT(answer->qname);
-    DEBUG_PRINT("type", htons(answer->type));
-    DEBUG_PRINT("class", htons(answer->qclass));
-    DEBUG_PRINT("ttl", ntohl(answer->ttl));
-    DEBUG_PRINT("len", htons(answer->len));
-    */
-
-
     switch (answer->qclass) {
         case DNS_CLASS_IN:
             switch (answer->type) {
 
                 case DNS_TYPE_A:
                     answer->record = get_a_record(*packet);
-                    DEBUG_PRINT("A", answer->record->data.A->ip4);
-
                     break;
 
                 case DNS_TYPE_AAAA:
                     answer->record = get_aaaa_record(*packet);
-                    DEBUG_PRINT("AAAA", answer->record->data.AAAA->ip6);
-
                     break;
 
                 case DNS_TYPE_CNAME:
                     answer->record = get_cname_record(*packet, header);
-                    DEBUG_PRINT("CNAME", answer->record->data.CNAME->cname);
-
                     break;
 
                 case DNS_TYPE_MX:
                     answer->record = get_mx_record(*packet, header);
-                    DEBUG_PRINT("MX", answer->record->data.MX->exchange);
-
                     break;
 
                 case DNS_TYPE_NS:
                     answer->record = get_ns_record(*packet, header);
                     DEBUG_PRINT("NS", answer->record->data.NS->nsname);
-
                     break;
 
                 case DNS_TYPE_SOA:
                     answer->record = get_soa_record(*packet, header);
-                    DEBUG_PRINT("SOA", answer->record->data.SOA->rname);
-
                     break;
 
                 case DNS_TYPE_TXT:
                     answer->record = get_txt_record(*packet, header);
-                    DEBUG_PRINT("TXT", answer->record->data.TXT->text);
-
                     break;
 
                 default:
@@ -490,7 +473,6 @@ std::string get_name(const b8 **packet, raw_dns_header *header) {
     return name + get_name(packet, header);
 
 }
-
 
 // TODO: free mem !!!
 rr_record* create_rr_record(rr_data data, rr_tag tag) {
