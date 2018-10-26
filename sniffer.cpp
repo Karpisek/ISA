@@ -611,4 +611,18 @@ rr_record* get_txt_record(const b8 *packet, raw_dns_header *header) {
     return create_rr_record(data, TXT);
 }
 
+// TODO: free mem !!!
+rr_record* get_spf_record(const b8 *packet, raw_dns_header *header) {
+    rr_data data;
+    spf_record *record;
+
+    record = (spf_record *) malloc(sizeof(spf_record));
+
+
+
+    data.SPF = record;
+
+    return create_rr_record(data, SPF);
+}
+
 

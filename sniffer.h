@@ -503,8 +503,21 @@ typedef struct txt_record{
     std::string text;
 } txt_record;
 
+/*
+ * SPF RDATA
+ *
+ *  +---------------------------------------------------------------+
+ *  |       0       |                ~                              |
+ *  +---------------+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |      LEN      |              TXT                              |
+ *  +---------------+---------------+---------------+---------------+
+ *
+ *  TXT - single string of text
+ */
+
 // TODO SPF
 typedef struct spf_record{
+    std::string text;
 } spf_record;
 
 typedef union rr_data {
