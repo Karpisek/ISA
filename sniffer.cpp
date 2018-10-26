@@ -21,7 +21,7 @@ sniff_handler *init_interface(char *dev) {
     /* opens live capture */
     handler->session = pcap_open_live(dev, BUFSIZ, 1, 1000, error_buffer);
     if(handler->session == nullptr) {
-        raise(ERR_INTERFACE_OPEN, std::string(error_buffer));
+        raise(ERR_INTERFACE_OPEN, error_buffer);
     }
 
     return handler;
@@ -35,7 +35,7 @@ sniff_handler *init_file(char *filename) {
 
     handler->session = pcap_open_offline(filename, error_buffer);
     if(handler->session == nullptr) {
-        raise(ERR_INTERFACE_OPEN, std::string(error_buffer));
+        raise(ERR_INTERFACE_OPEN, error_buffer);
     }
 
     return handler;
@@ -142,43 +142,43 @@ void process_packet(const b8 *packet) {
 
     DEBUG_DATAGRAM_PRINT("Questions");
     for(int i = 0; i < dns->header->questions_number; i++) {
-        std::cout << dns->body->questions[i]->qname << " " << dns->body->questions[i]->qclass << " " << dns->body->questions[i]->type << std::endl;
+        std::cout << dns->body->questions[i]->qname.str << " " <<dns->body->questions[i]->qclass << " " << dns->body->questions[i]->type << std::endl;
     }
 
     DEBUG_DATAGRAM_PRINT("Answers");
     for(int i = 0; i < dns->header->answers_number; i++) {
-        std::cout << dns->body->answers[i]->qname << std::endl;
+        std::cout << dns->body->answers[i]->qname.str << std::endl;
         std::cout << "CLASS: " << dns->body->answers[i]->qclass << " TYPE: " << dns->body->answers[i]->type << std::endl;
 
         rr_record *record = dns->body->answers[i]->record;
 
         switch (record->type) {
             case A:
-                DEBUG_PRINT("A", record->data.A->ip4);
+                DEBUG_PRINT("A", record->data.A->ip4.str);
                 break;
 
             case AAAA:
-                DEBUG_PRINT("AAAA", record->data.AAAA->ip6);
+                DEBUG_PRINT("AAAA", record->data.AAAA->ip6.str);
                 break;
 
             case CNAME:
-                DEBUG_PRINT("CNAME", record->data.CNAME->cname);
+                DEBUG_PRINT("CNAME", record->data.CNAME->cname.str);
                 break;
 
             case MX:
-                DEBUG_PRINT("MX", record->data.MX->exchange);
+                DEBUG_PRINT("MX", record->data.MX->exchange.str);
                 break;
 
             case NS:
-                DEBUG_PRINT("NS", record->data.NS->nsname);
+                DEBUG_PRINT("NS", record->data.NS->nsname.str);
                 break;
 
             case SOA:
-                DEBUG_PRINT("SOA", record->data.SOA->mnname);
+                DEBUG_PRINT("SOA", record->data.SOA->mnname.str);
                 break;
 
             case TXT:
-                DEBUG_PRINT("TXT", record->data.TXT->text);
+                DEBUG_PRINT("TXT", record->data.TXT->text.str);
                 break;
 
             default:
@@ -220,14 +220,14 @@ ip4_protocol* process_ip4_header(const b8 *packet) {
     DEBUG_DATAGRAM_PRINT("IP");
     char buf[INET_ADDRSTRLEN];
     if(inet_ntop(AF_INET, &ip->dst, buf, INET_ADDRSTRLEN) != nullptr) {
-        DEBUG_PRINT("SRC", buf);
+        DEBUG_PRINT("DEST", buf);
     } else {
         raise(12);
     }
 
     // print IP src address
     if(inet_ntop(AF_INET, &ip->src, buf, INET_ADDRSTRLEN) != nullptr) {
-        DEBUG_PRINT("DEST", buf);
+        DEBUG_PRINT("SRC", buf);
     } else {
         raise(12);
     }
@@ -247,14 +247,14 @@ ip6_protocol* process_ip6_header(const b8 *packet) {
     DEBUG_DATAGRAM_PRINT("IP");
     char buf[INET6_ADDRSTRLEN];
     if(inet_ntop(AF_INET6, &ip6->dst, buf, INET6_ADDRSTRLEN) != nullptr) {
-        DEBUG_PRINT("SRC", buf);
+        DEBUG_PRINT("DEST", buf);
     } else {
         raise(12);
     }
 
     // print IP src address
     if(inet_ntop(AF_INET6, &ip6->src, buf, INET6_ADDRSTRLEN) != nullptr) {
-        DEBUG_PRINT("DEST", buf);
+        DEBUG_PRINT("SRC", buf);
     } else {
         raise(12);
     }
@@ -285,7 +285,6 @@ int process_tcp_header(const b8 *packet) {
 
 dns_protocol* process_dns(const b8 *packet) {
     dns_protocol *dns;              /* DNS protocol */
-    const b8* dns_datagram_start;
 
     /* allocation memory for dns_protocol structure */
     dns = (dns_protocol *) malloc(sizeof(dns_protocol));
@@ -370,13 +369,14 @@ rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
 rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
     rr_answer *answer;
 
-    answer = (rr_answer *) malloc(sizeof(rr_answer));
+    answer = new rr_answer;
 
     /*
      * NAME is stored in shortened format, first two bits are '1' rest is integer representing offset in octets from
      * DNS datagram start
      */
-    answer->qname = get_name(packet, header);
+    string x = get_name(packet, header);
+    answer->qname = x;
     *packet += RESOURCE_RECORD_NAME_OFFSET;
 
     answer->type = htons(*(b16 *) *packet);
@@ -413,7 +413,6 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
 
                 case DNS_TYPE_NS:
                     answer->record = get_ns_record(*packet, header);
-                    DEBUG_PRINT("NS", answer->record->data.NS->nsname);
                     break;
 
                 case DNS_TYPE_SOA:
@@ -425,8 +424,8 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     break;
 
                 default:
+                    raise(128, "unsupported DNS rr_record TYPE");
                     break;
-                    //raise(128, "unsupported DNS rr_record TYPE");
 
             }
             break;
@@ -443,35 +442,35 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
     return answer;
 }
 
-std::string get_name(const b8 **packet, raw_dns_header *header) {
+string get_name(const b8 **packet, raw_dns_header *header) {
 
-    std::string name;
+    string name = str_create();
 
     if((ntohs(*(b16 *) *packet) & 0b1100000000000000) == 0b1100000000000000) {
         int offset = ntohs(*(b16 *) *packet) & 0b0011111111111111;
         const b8 *name_start = (const b8 *) header + offset;
 
-        return name + get_name(&name_start, header);
+        return str_add(name, get_name(&name_start, header));
     }
 
     int next_label_size = **packet;
     *packet += sizeof(b8);
 
     if(next_label_size == 0) {
-        return "";
+
+        return str_create();
     }
 
 
     /* add characters to output string in range of defined label */
     for(int i = 0; i < next_label_size; i++) {
-        name += **packet;
+        str_put(&name, **packet);
         (*packet)++;
     }
 
-    name += '.';
+    str_put(&name, '.');
 
-    return name + get_name(packet, header);
-
+    return str_add(name, get_name(packet, header));
 }
 
 // TODO: free mem !!!
@@ -493,8 +492,9 @@ rr_record* get_a_record(const b8 *packet) {
     a_record *record;
 
     record = (a_record *) malloc(sizeof(a_record));
+    record->ip4 = str_create();
 
-    record->ip4 = inet_ntop(AF_INET, packet, buf, INET_ADDRSTRLEN);
+    const_to_str(&record->ip4, inet_ntop(AF_INET, packet, buf, INET_ADDRSTRLEN));
 
     data.A = record;
 
@@ -508,8 +508,9 @@ rr_record* get_aaaa_record(const b8 *packet) {
     aaaa_record *record;
 
     record = (aaaa_record *) malloc(sizeof(aaaa_record));
+    record->ip6 = str_create();
 
-    record->ip6 = inet_ntop(AF_INET6, packet, buf, INET6_ADDRSTRLEN);
+    const_to_str(&record->ip6, inet_ntop(AF_INET6, packet, buf, INET6_ADDRSTRLEN));
 
     data.AAAA = record;
 
@@ -602,7 +603,7 @@ rr_record* get_txt_record(const b8 *packet, raw_dns_header *header) {
     packet++;
 
     for(int i = 0; i < record->length; i++) {
-        record->text += *packet;
+        str_put(&record->text, *packet);
         packet++;
     }
 

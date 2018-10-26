@@ -4,7 +4,7 @@
 
 #include "error.h"
 
-void raise(int code, std::string message) {
+void raise(int code, char *message) {
 
     std::cerr << "ERROR " << code << " : " << message << std::endl;
     exit(code);

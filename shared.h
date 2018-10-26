@@ -5,6 +5,9 @@
 #ifndef ISA_SHARED_H
 #define ISA_SHARED_H
 
-extern int this_is_global;
+#include <vector>
+#include <string>
+
+extern std::vector <std::string> global_statistics;
 
 #endif //ISA_SHARED_H

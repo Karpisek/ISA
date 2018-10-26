@@ -18,15 +18,14 @@
 #include <unistd.h>
 #include <cstdio>
 #include <iostream>
-#include <sstream>
 #include <pcap.h>
 #include <ctime>
-#include <string>
 #include <netinet/if_ether.h>
 #include <arpa/inet.h>
 
 #include "error.h"
 #include "shared.h"
+#include "string.h"
 
 struct rr_question;
 struct rr_answer;
@@ -294,7 +293,7 @@ typedef struct dns_protocol {
  */
 
 typedef struct rr_question {
-    std::string qname;
+    string qname;
     int type;
     int qclass;
 } rr_question;
@@ -344,7 +343,7 @@ typedef struct rr_question {
 
 
 typedef struct rr_answer {
-    std::string qname;
+    string qname;
     int type;
     int qclass;
     int ttl;
@@ -366,7 +365,7 @@ typedef struct rr_answer {
  */
 
 typedef struct a_record{
-    std::string ip4;
+    string ip4;
 } a_record;
 
 /*
@@ -383,7 +382,7 @@ typedef struct a_record{
  */
 
 typedef struct aaaa_record{
-    std::string ip6;
+    string ip6;
 } aaaa_record;
 
 /*
@@ -400,7 +399,7 @@ typedef struct aaaa_record{
  */
 
 typedef struct cname_record{
-    std::string cname;
+    string cname;
 } cname_record;
 
 /*
@@ -421,7 +420,7 @@ typedef struct cname_record{
 
 typedef struct mx_record{
     int preference;
-    std::string exchange;
+    string exchange;
 } mx_record;
 
 /*
@@ -438,7 +437,7 @@ typedef struct mx_record{
  */
 
 typedef struct ns_record{
-    std::string nsname;
+    string nsname;
 } ms_record;
 
 /*
@@ -475,8 +474,8 @@ typedef struct ns_record{
  */
 
 typedef struct soa_record{
-    std::string mnname;
-    std::string rname;
+    string mnname;
+    string rname;
     unsigned int serial;
     unsigned int refresh;
     unsigned int retry;
@@ -500,7 +499,7 @@ typedef struct soa_record{
 
 typedef struct txt_record{
     int length;
-    std::string text;
+    string text;
 } txt_record;
 
 /*
@@ -517,7 +516,7 @@ typedef struct txt_record{
 
 // TODO SPF
 typedef struct spf_record{
-    std::string text;
+    string text;
 } spf_record;
 
 typedef union rr_data {
@@ -579,7 +578,7 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header);
 rr_question* get_query_record(const b8 **packet, raw_dns_header *header);
 rr_answer* get_answers_record(const b8 **packet, raw_dns_header *header);
 
-std::string get_name(const b8 **packet, raw_dns_header *header);
+string get_name(const b8 **packet, raw_dns_header *header);
 
 /* records parsers */
 rr_record* create_rr_record(rr_data data, rr_tag tag);

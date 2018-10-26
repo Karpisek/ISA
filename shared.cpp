@@ -3,3 +3,5 @@
 //
 
 #include "shared.h"
+
+std::vector <std::string> global_statistics;
