@@ -142,43 +142,43 @@ void process_packet(const b8 *packet) {
 
     DEBUG_DATAGRAM_PRINT("Questions");
     for(int i = 0; i < dns->header->questions_number; i++) {
-        std::cout << dns->body->questions[i]->qname.str << " " <<dns->body->questions[i]->qclass << " " << dns->body->questions[i]->type << std::endl;
+        std::cout << dns->body->questions[i]->qname << " " <<dns->body->questions[i]->qclass << " " << dns->body->questions[i]->type << std::endl;
     }
 
     DEBUG_DATAGRAM_PRINT("Answers");
     for(int i = 0; i < dns->header->answers_number; i++) {
-        std::cout << dns->body->answers[i]->qname.str << std::endl;
+        std::cout << dns->body->answers[i]->qname << std::endl;
         std::cout << "CLASS: " << dns->body->answers[i]->qclass << " TYPE: " << dns->body->answers[i]->type << std::endl;
 
         rr_record *record = dns->body->answers[i]->record;
 
         switch (record->type) {
             case A:
-                DEBUG_PRINT("A", record->data.A->ip4.str);
+                DEBUG_PRINT("A", record->data.A->ip4);
                 break;
 
             case AAAA:
-                DEBUG_PRINT("AAAA", record->data.AAAA->ip6.str);
+                DEBUG_PRINT("AAAA", record->data.AAAA->ip6);
                 break;
 
             case CNAME:
-                DEBUG_PRINT("CNAME", record->data.CNAME->cname.str);
+                DEBUG_PRINT("CNAME", record->data.CNAME->cname);
                 break;
 
             case MX:
-                DEBUG_PRINT("MX", record->data.MX->exchange.str);
+                DEBUG_PRINT("MX", record->data.MX->exchange);
                 break;
 
             case NS:
-                DEBUG_PRINT("NS", record->data.NS->nsname.str);
+                DEBUG_PRINT("NS", record->data.NS->nsname);
                 break;
 
             case SOA:
-                DEBUG_PRINT("SOA", record->data.SOA->mnname.str);
+                DEBUG_PRINT("SOA", record->data.SOA->mnname);
                 break;
 
             case TXT:
-                DEBUG_PRINT("TXT", record->data.TXT->text.str);
+                DEBUG_PRINT("TXT", record->data.TXT->text);
                 break;
 
             default:
@@ -375,7 +375,7 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
      * NAME is stored in shortened format, first two bits are '1' rest is integer representing offset in octets from
      * DNS datagram start
      */
-    string x = get_name(packet, header);
+    std::string x = get_name(packet, header);
     answer->qname = x;
     *packet += RESOURCE_RECORD_NAME_OFFSET;
 
@@ -442,15 +442,15 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
     return answer;
 }
 
-string get_name(const b8 **packet, raw_dns_header *header) {
+std::string get_name(const b8 **packet, raw_dns_header *header) {
 
-    string name = str_create();
+    std::string name;
 
     if((ntohs(*(b16 *) *packet) & 0b1100000000000000) == 0b1100000000000000) {
         int offset = ntohs(*(b16 *) *packet) & 0b0011111111111111;
         const b8 *name_start = (const b8 *) header + offset;
 
-        return str_add(name, get_name(&name_start, header));
+        return name + get_name(&name_start, header);
     }
 
     int next_label_size = **packet;
@@ -458,19 +458,19 @@ string get_name(const b8 **packet, raw_dns_header *header) {
 
     if(next_label_size == 0) {
 
-        return str_create();
+        return "";
     }
 
 
     /* add characters to output string in range of defined label */
     for(int i = 0; i < next_label_size; i++) {
-        str_put(&name, **packet);
+        name += **packet;
         (*packet)++;
     }
 
-    str_put(&name, '.');
+    name += '.';
 
-    return str_add(name, get_name(packet, header));
+    return name +  get_name(packet, header);
 }
 
 // TODO: free mem !!!
@@ -492,9 +492,7 @@ rr_record* get_a_record(const b8 *packet) {
     a_record *record;
 
     record = (a_record *) malloc(sizeof(a_record));
-    record->ip4 = str_create();
-
-    const_to_str(&record->ip4, inet_ntop(AF_INET, packet, buf, INET_ADDRSTRLEN));
+    record->ip4 = inet_ntop(AF_INET, packet, buf, INET_ADDRSTRLEN);
 
     data.A = record;
 
@@ -508,9 +506,8 @@ rr_record* get_aaaa_record(const b8 *packet) {
     aaaa_record *record;
 
     record = (aaaa_record *) malloc(sizeof(aaaa_record));
-    record->ip6 = str_create();
+    record->ip6 = inet_ntop(AF_INET6, packet, buf, INET6_ADDRSTRLEN);
 
-    const_to_str(&record->ip6, inet_ntop(AF_INET6, packet, buf, INET6_ADDRSTRLEN));
 
     data.AAAA = record;
 
@@ -603,7 +600,7 @@ rr_record* get_txt_record(const b8 *packet, raw_dns_header *header) {
     packet++;
 
     for(int i = 0; i < record->length; i++) {
-        str_put(&record->text, *packet);
+        record->text += *packet;
         packet++;
     }
 
