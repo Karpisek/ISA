@@ -5,7 +5,7 @@
 #include "user_signal.h"
 
 void print_statistics(int signum) {
-    std::cout << "actual statistic size: " << global_statistics.size() << std::endl;
+    std::cout << "<smazat !!!> actual statistic size: " << global_statistics.size() << std::endl;
 
     for(auto record: global_statistics) {
         std::cout << parse_stats(record) << std::endl;
@@ -20,31 +20,59 @@ void send_statistics(int signum) {
 
 const char *parse_stats(rr_record* record) {
 
+    std::string message;
+
     switch (record->type) {
         case A:
-            return ("A " + record->data.A->ip4).c_str();
+            message += "A" ;
+            message += " ";
+            message += record->data.A->ip4;
+            break;
 
         case AAAA:
-            return ("AAAA " + record->data.AAAA->ip6).c_str();
+            message += "AAAA";
+            message += " ";
+            message += record->data.AAAA->ip6;
+            break;
 
         case CNAME:
-            return ("CNAME " + record->data.CNAME->cname).c_str();
+            message += "CNAME";
+            message += " ";
+            message += record->data.CNAME->cname;
+            break;
 
         case MX:
-            return ("MX " + std::to_string(record->data.MX->preference) + " " + record->data.MX->exchange).c_str();
+            message += "MX";
+            message += " ";
+            message += std::to_string(record->data.MX->preference);
+            message += " ";
+            message += record->data.MX->exchange;
+            break;
 
         case NS:
-            return ("NS " + record->data.NS->nsname).c_str();
+            message += "NS";
+            message += " ";
+            message += record->data.NS->nsname;
+            break;
 
         case SOA:
-            return ("SOA " + record->data.SOA->mnname).c_str();
+            message += "SOA";
+            message += " ";
+            message += record->data.SOA->mnname;
+            break;
 
         case TXT:
-            return ("TXT " + record->data.TXT->text).c_str();
+            message += "TXT";
+            message += " ";
+            message += record->data.TXT->text;
+            break;
 
         default:
             break;
     }
 
-    std::cout << std::endl;
+    message += " ";
+    message += std::to_string(record->count);
+
+    return message.c_str();
 }

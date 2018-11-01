@@ -140,20 +140,10 @@ void process_packet(const b8 *packet) {
     /* L4 */
     dns = process_dns(packet);
 
-    DEBUG_DATAGRAM_PRINT("Questions");
-    for(int i = 0; i < dns->header->questions_number; i++) {
-        std::cout << dns->body->questions[i]->qname << " " <<dns->body->questions[i]->qclass << " " << dns->body->questions[i]->type << std::endl;
-    }
-
-    DEBUG_DATAGRAM_PRINT("Answers");
     for(int i = 0; i < dns->header->answers_number; i++) {
-        std::cout << dns->body->answers[i]->qname << std::endl;
-        std::cout << "CLASS: " << dns->body->answers[i]->qclass << " TYPE: " << dns->body->answers[i]->type << std::endl;
-
-        rr_record *record = dns->body->answers[i]->record;
 
         /* adding answers to global statistics */
-        add_to_statistics(record);
+        add_to_statistics(dns->body->answers[i]->record);
     }
 }
 
@@ -164,12 +154,6 @@ ethernet_protocol* process_ether_header(const unsigned char **packet) {
     /* typecast ethernet header */
     ethernet = (ethernet_protocol *) *packet;
 
-    // ### DEBUG PRINT ###
-    std::cout << std::endl << std::endl;
-    DEBUG_DATAGRAM_PRINT("Ethernet");
-    DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_dest));
-    DEBUG_PRINT("SRC", ether_ntoa((const struct ether_addr *) ethernet->mac_host));
-
     return ethernet;
 }
 
@@ -179,29 +163,19 @@ ip4_protocol* process_ip4_header(const b8 *packet) {
     /* typecast ip header */
     ip = (ip4_protocol *) packet;
 
-
     if(IP_HEAD_LEN(ip) < 20) {
         raise(3, "wrong IP header cannot be smaller then 20 bytes");
     }
 
-    /* ## DEBUG print IP dest address */
-    DEBUG_DATAGRAM_PRINT("IP");
     char buf[INET_ADDRSTRLEN];
-    if(inet_ntop(AF_INET, &ip->dst, buf, INET_ADDRSTRLEN) != nullptr) {
-        DEBUG_PRINT("DEST", buf);
-    } else {
+    if(inet_ntop(AF_INET, &ip->dst, buf, INET_ADDRSTRLEN) == nullptr) {
         raise(12);
     }
 
     // print IP src address
-    if(inet_ntop(AF_INET, &ip->src, buf, INET_ADDRSTRLEN) != nullptr) {
-        DEBUG_PRINT("SRC", buf);
-    } else {
+    if(inet_ntop(AF_INET, &ip->src, buf, INET_ADDRSTRLEN) == nullptr) {
         raise(12);
     }
-
-    DEBUG_PRINT("size", IP_HEAD_LEN(ip));
-    DEBUG_PRINT("version", IP_VERSION(ip));
 
     return ip;
 }
@@ -211,23 +185,15 @@ ip6_protocol* process_ip6_header(const b8 *packet) {
 
     ip6 = (ip6_protocol *) packet;
 
-    /* ## DEBUG print IP dest address */
-    DEBUG_DATAGRAM_PRINT("IP");
     char buf[INET6_ADDRSTRLEN];
-    if(inet_ntop(AF_INET6, &ip6->dst, buf, INET6_ADDRSTRLEN) != nullptr) {
-        DEBUG_PRINT("DEST", buf);
-    } else {
+    if(inet_ntop(AF_INET6, &ip6->dst, buf, INET6_ADDRSTRLEN) == nullptr) {
         raise(12);
     }
 
     // print IP src address
-    if(inet_ntop(AF_INET6, &ip6->src, buf, INET6_ADDRSTRLEN) != nullptr) {
-        DEBUG_PRINT("SRC", buf);
-    } else {
+    if(inet_ntop(AF_INET6, &ip6->src, buf, INET6_ADDRSTRLEN) == nullptr) {
         raise(12);
     }
-
-    DEBUG_PRINT("next header:", (int) ip6->next);
 
     return ip6;
 }
@@ -236,16 +202,10 @@ udp_protocol* process_upd_header(const b8 *packet) {
     udp_protocol *udp;     /* UDP header */
 
     udp = (udp_protocol *) packet;
-
-    DEBUG_DATAGRAM_PRINT("UDP");
-    DEBUG_PRINT("SRC", ntohs(udp->src));
-    DEBUG_PRINT("DEST", ntohs(udp->dst));
-    DEBUG_PRINT("LEN", ntohs(udp->len));
 }
 
 // TODO: tcp_header
 int process_tcp_header(const b8 *packet) {
-    DEBUG_DATAGRAM_PRINT("TCP");
 
     raise(42, "tcp datagram not implemented");
     return 0;
