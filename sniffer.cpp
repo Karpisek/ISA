@@ -10,7 +10,7 @@ sniff_handler *init_interface(char *dev) {
     sniff_handler *handler;                 /* Session handle */
     char error_buffer[PCAP_ERRBUF_SIZE];    /* Error string */
 
-    handler = (sniff_handler *) malloc(sizeof(sniff_handler));
+    handler = new sniff_handler;
 
     handler->dev = dev;
 
@@ -31,7 +31,7 @@ sniff_handler *init_file(char *filename) {
     sniff_handler *handler;                 /* Session handle */
     char error_buffer[PCAP_ERRBUF_SIZE];    /* Error string */
 
-    handler = (sniff_handler *) malloc(sizeof(sniff_handler));
+    handler = new sniff_handler;
 
     handler->session = pcap_open_offline(filename, error_buffer);
     if(handler->session == nullptr) {
@@ -290,7 +290,7 @@ dns_protocol* process_dns(const b8 *packet) {
     dns_protocol *dns;              /* DNS protocol */
 
     /* allocation memory for dns_protocol structure */
-    dns = (dns_protocol *) malloc(sizeof(dns_protocol));
+    dns = new dns_protocol;
 
     /* pointing to dns_header */
     dns->header = get_dns_header(packet);
@@ -309,9 +309,7 @@ dns_header* get_dns_header(const b8 *packet) {
 
     raw_header = (raw_dns_header *)packet;
 
-    if((header = (dns_header *) malloc(sizeof(dns_header))) == nullptr){
-        raise(1234, "Malloc error");
-    }
+    header = new dns_header;
 
     header->raw_header = raw_header;
     header->identification = ntohs(raw_header->identification);
@@ -327,13 +325,12 @@ dns_header* get_dns_header(const b8 *packet) {
 dns_body* get_dns_body(const b8 **packet, dns_header *header) {
     dns_body *body;
 
-    body = (dns_body *) malloc(sizeof(dns_body));
+    body = new dns_body;
 
     /* allocates memory for all question pointers */
     int ques_num = header->questions_number;
-    if((body->questions = (rr_question **) malloc(ques_num *sizeof(rr_question *))) == nullptr) {
-        raise(1234, "Malloc error");
-    }
+    body->questions = new rr_question*[ques_num];
+
     /* loop over questions */
     for(int i = 0; i < ques_num; i++) {
         body->questions[i] = get_query_record(packet, header->raw_header);
@@ -341,7 +338,7 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
 
     /* allocates memory for all answer pointers */
     int answ_num = header->answers_number;
-    body->answers = (rr_answer **) malloc(answ_num * sizeof(rr_record *));
+    body->answers = new rr_answer*[ques_num];
 
     /* loop over answers */
     for(int i = 0; i < answ_num; i++) {
@@ -355,7 +352,7 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
 rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
     rr_question *question;
 
-    question = (rr_question *) malloc(sizeof(rr_question));
+    question = new rr_question;
 
     question->qname = get_name(packet, header);
 
@@ -481,7 +478,7 @@ std::string get_name(const b8 **packet, raw_dns_header *header) {
 rr_record* create_rr_record(rr_data data, rr_tag tag) {
     rr_record* new_data;
 
-    new_data = (rr_record *) malloc(sizeof(rr_record));
+    new_data = new rr_record;
 
     new_data->type = tag;
     new_data->data = data;
@@ -495,7 +492,7 @@ rr_record* get_a_record(const b8 *packet) {
     rr_data data;
     a_record *record;
 
-    record = (a_record *) malloc(sizeof(a_record));
+    record = new a_record;
     record->ip4 = inet_ntop(AF_INET, packet, buf, INET_ADDRSTRLEN);
 
     data.A = record;
@@ -509,7 +506,7 @@ rr_record* get_aaaa_record(const b8 *packet) {
     rr_data data;
     aaaa_record *record;
 
-    record = (aaaa_record *) malloc(sizeof(aaaa_record));
+    record = new aaaa_record;
     record->ip6 = inet_ntop(AF_INET6, packet, buf, INET6_ADDRSTRLEN);
 
 
@@ -523,7 +520,7 @@ rr_record* get_cname_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     cname_record *record;
 
-    record = (cname_record *) malloc(sizeof(cname_record));
+    record = new cname_record;
 
     record->cname = get_name(&packet, header);
 
@@ -537,7 +534,7 @@ rr_record* get_mx_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     mx_record *record;
 
-    record = (mx_record *) malloc(sizeof(mx_record));
+    record = new mx_record;
 
     record->preference = ntohs( *(b16 *) packet);
     packet += sizeof(b16);
@@ -554,7 +551,7 @@ rr_record* get_ns_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     ns_record *record;
 
-    record = (ns_record *) malloc(sizeof(ns_record));
+    record = new ns_record;
 
     record->nsname = get_name(&packet, header);
 
@@ -568,7 +565,7 @@ rr_record* get_soa_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     soa_record *record;
 
-    record = (soa_record *) malloc(sizeof(soa_record));
+    record = new soa_record;
 
     record->mnname = get_name(&packet, header);
     record->rname = get_name(&packet, header);
@@ -598,7 +595,7 @@ rr_record* get_txt_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     txt_record *record;
 
-    record = (txt_record *) malloc(sizeof(txt_record));
+    record = new txt_record;
 
     record->length = *packet;
     packet++;
@@ -618,7 +615,7 @@ rr_record* get_spf_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     spf_record *record;
 
-    record = (spf_record *) malloc(sizeof(spf_record));
+    record = new spf_record;
 
 
 
