@@ -15,7 +15,7 @@
 
 void send_statistics(int signum);
 void print_statistics(int signum);
-
+const char *parse_stats(rr_record* record);
 
 
 #endif //ISA_USER_SIGNAL_H

@@ -6,13 +6,19 @@
 
 void print_statistics(int signum) {
     std::cout << "actual statistic size: " << global_statistics.size() << std::endl;
+
+    for(auto record: global_statistics) {
+        std::cout << parse_stats(record) << std::endl;
+    }
+
+    std::cout << std::endl;
 }
 
 void send_statistics(int signum) {
     // spawn new process to copy and send
 }
 
-const char *get_statistic(rr_record* record) {
+const char *parse_stats(rr_record* record) {
 
     switch (record->type) {
         case A:
