@@ -27,10 +27,14 @@
 #include "error.h"
 #include "shared.h"
 #include "string.h"
+#include "records.h"
 
-struct rr_question;
-struct rr_answer;
-struct rr_record;
+typedef struct _rr_question rr_question;
+typedef struct _rr_answer rr_answer;
+
+
+typedef struct _sniff_handler sniff_handler;
+
 
 /* Typedefs for better readability */
 typedef unsigned int b32;
@@ -293,11 +297,11 @@ typedef struct dns_protocol {
  *
  */
 
-typedef struct rr_question {
+struct _rr_question {
     std::string qname;
     int type;
     int qclass;
-} rr_question;
+};
 
 /*
  *  Resource Record
@@ -343,14 +347,14 @@ typedef struct rr_question {
 // #define DNS_TYPE_SPF
 
 
-typedef struct rr_answer {
+struct _rr_answer {
     std::string qname;
     int type;
     int qclass;
     int ttl;
     int len;
     rr_record *record;
-} rr_answer;
+};
 
 /*
  * A RDATA
@@ -365,194 +369,14 @@ typedef struct rr_answer {
  *
  */
 
-typedef struct a_record{
-    std::string ip4;
-} a_record;
 
-/*
- * AAAA RDATA
- *
- *  +---------------------------------------------------------------+
- *  |                            0 ... 18                           |
- *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                            ADDRESS                            |
- *  +-------------------------------+-------------------------------+
- *
- *  ADDRESS - 128 bit Internet IPv6 address
- *
- */
 
-typedef struct aaaa_record{
-    std::string ip6;
-} aaaa_record;
-
-/*
- * CNAME RDATA
- *
- *  +---------------------------------------------------------------+
- *  |                               ~                               |
- *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                             CNAME                             |
- *  +-------------------------------+-------------------------------+
- *
- *  CNAME - again name in labels
- *
- */
-
-typedef struct cname_record{
-    std::string cname;
-} cname_record;
-
-/*
- * MX RDATA
- *
- *  +-------------------------------+
- *  |       0       |       1       |
- *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |              PREF             |
- *  +-------------------------------+
- *  ~ ~ ~ ~ ~ ~ ~EXCHANGE ~ ~ ~ ~ ~ ~
- *  +-------------------------------+
- *
- *  PREFERENCE  - integer specifies the preference in compare to other RR. Lowest value is higher
- *  EXCHANGE    - labels specifies a host willing to act as a mail exchange for the owner
- *
- */
-
-typedef struct mx_record{
-    int preference;
-    std::string exchange;
-} mx_record;
-
-/*
- * NSNAME RDATA
- *
- *  +---------------------------------------------------------------+
- *  |                               ~                               |
- *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                             NSNAME                            |
- *  +-------------------------------+-------------------------------+
- *
- *  NSNAME - name in labels specifies a host which should be authoritative
- *
- */
-
-typedef struct ns_record{
-    std::string nsname;
-} ms_record;
-
-/*
- * SOA RDATA
- *
- *  +---------------------------------------------------------------+
- *  |       0       |       1       |       2       |       3       |
- *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ MNNAME~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
- *  +---------------------------------------------------------------+
- *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ RNAME ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
- *  +---------------------------------------------------------------+
- *  |                             SERIAL                            |
- *  +---------------+---------------+---------------+---------------+
- *  |                            REFRESH                            |
- *  +---------------+---------------+---------------+---------------+
- *  |                             RETRY                             |
- *  +---------------+---------------+---------------+---------------+
- *  |                             EXPIRE                            |
- *  +---------------+---------------+---------------+---------------+
- *  |                            MINIMUM                            |
- *  +---------------+---------------+---------------+---------------+
- *
- *  MNNAME  - domain name of the name server that was the original or primary source of data for this zone.
- *  RNAME   - domain name which specifies the mailbox of the person responsible for this zone.
- *  SERIAL  - version number of the original copy of the zone
- *  REFRESH - time interval before the zone should be refreshed.
- *  RETRY   - time interval that should elapse before a failed refresh should be retried.
- *  EXPIRE  - time value that specifies the upper limit on
- *            the time interval that can elapse before the zone is no
- *            longer authoritative.
- *  MINIMUM - minimum TTL field that should be exported with any RR from this zone.
- *
- */
-
-typedef struct soa_record{
-    std::string mnname;
-    std::string rname;
-    unsigned int serial;
-    unsigned int refresh;
-    unsigned int retry;
-    unsigned int expire;
-    unsigned int minimum;
-} soa_record;
-
-/*
- * TXT RDATA
- *
- *  +---------------------------------------------------------------+
- *  |       0       |                ~                              |
- *  +---------------+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |      LEN      |              TXT                              |
- *  +---------------+---------------+---------------+---------------+
- *
- *  LEN - length of the TXT
- *  TXT - characters
- *
- */
-
-typedef struct txt_record{
-    int length;
-    std::string text;
-} txt_record;
-
-/*
- * SPF RDATA
- *
- *  +---------------------------------------------------------------+
- *  |       0       |                ~                              |
- *  +---------------+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |      LEN      |              TXT                              |
- *  +---------------+---------------+---------------+---------------+
- *
- *  TXT - single string of text
- */
-
-// TODO SPF
-typedef struct spf_record{
-    std::string text;
-} spf_record;
-
-typedef union rr_data {
-    a_record* A;
-    aaaa_record* AAAA;
-    cname_record* CNAME;
-    mx_record* MX;
-    ms_record* NS;
-    soa_record* SOA;
-    txt_record* TXT;
-    spf_record* SPF;
-} rr_data;
-
-typedef enum rr_tag {
-    A,
-    AAAA,
-    CNAME,
-    MX,
-    NS,
-    SOA,
-    TXT,
-    SPF,
-} rr_tag;
-
-typedef struct rr_record {
-    rr_tag type;
-    rr_data data;
-} rr_record;
-
-typedef struct sniff_handler {
+struct _sniff_handler {
     pcap_t *session;
     b32 ip_address;
     b32 netmask;
     char *dev;
-} sniff_handler;
+};
 
 sniff_handler *init_interface(char *dev);
 sniff_handler *init_file(char *filename);

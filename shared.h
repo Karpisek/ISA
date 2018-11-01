@@ -7,7 +7,8 @@
 
 #include <vector>
 #include <string>
+#include "records.h"
 
-extern std::vector <std::string> global_statistics;
+extern std::vector <rr_record> global_statistics;
 
 #endif //ISA_SHARED_H

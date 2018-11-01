@@ -15,7 +15,7 @@ int init_sender(const char *addr_str) {
 
     memset(&hint, 0, sizeof hint);  // make sure the struct is empty
     hint.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
-    hint.ai_socktype = SOCK_STREAM; // TCP stream sockets
+    hint.ai_socktype = SOCK_DGRAM;  // UDP stream sockets
     hint.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
     /* get info about the host */
@@ -40,35 +40,16 @@ int init_sender(const char *addr_str) {
     return socket_fd;
 }
 
-int close_connection(int opened_connection) {
-    if(close(opened_connection) != 0) {
+int close_connection(int connection) {
+    if(close(connection) != 0) {
         printf("ERROR closing socket");
     }
+
+    return 0;
 }
 
-int parse_ip_address(const char *addr_str, struct addrinfo *info, struct in6_addr *addr) {
+int syslog_send(int connection, char *data_to_send) {
+    send(connection, data_to_send, 1024, 0);  // send data to the server
 
-    int success = inet_pton(AF_INET, addr_str, addr);
-
-    if(success == 1) {
-        info->ai_family = AF_INET;
-        info->ai_flags |= AI_NUMERICHOST;
-
-        return 0;
-    }
-    if(success != 0) {
-        return 1;
-    }
-
-    success = inet_pton(AF_INET6, addr_str, addr);
-    if(success == 1) {
-
-        info->ai_family = AF_INET6;
-        info->ai_flags |= AI_NUMERICHOST;
-
-        return 0;
-    }
-
-
-    return 1;
+    return 0;
 }

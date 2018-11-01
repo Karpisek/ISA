@@ -14,7 +14,7 @@
 #include "error.h"
 
 int init_sender(const char *addr_str);
-int close_connection();
-int parse_ip_address(const char *addr_str, struct addrinfo *info, struct in6_addr *addr);
+int close_connection(int connection);
+int syslog_send(int connection, char *data_to_send);
 
 #endif //ISA_SENDER_H

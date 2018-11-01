@@ -11,6 +11,6 @@
 #include <cstdio>
 #include <string>
 
-void raise(int code, char *message);
+void raise(int code, std::string message);
 
 #endif //ISA_ERROR_H

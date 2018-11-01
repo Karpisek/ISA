@@ -4,4 +4,4 @@
 
 #include "shared.h"
 
-std::vector <std::string> global_statistics;
+std::vector <rr_record> global_statistics;

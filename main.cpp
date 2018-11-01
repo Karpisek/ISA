@@ -6,12 +6,11 @@
 
 int main(int argc, char **argv) {
 
-    //lobal_statistics.emplace_back("ahoj");
+    //global_statistics.emplace_back("ahoj");
 
     //for (const auto &global_statistic : global_statistics) {
     //    std::cout << global_statistic << std::endl;
     //}
-
 
     /* user signal registration */
     signal(SIGUSR1, send_statistics);
