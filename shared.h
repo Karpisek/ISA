@@ -11,4 +11,6 @@
 
 extern std::vector <rr_record *> global_statistics;
 
+void add_to_statistics(rr_record *record);
+
 #endif //ISA_SHARED_H

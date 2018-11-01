@@ -155,40 +155,8 @@ void process_packet(const b8 *packet) {
         /* adding answers to global statistics */
         global_statistics.push_back(record);
 
-        switch (record->type) {
-            case A:
-                DEBUG_PRINT("A", record->data.A->ip4);
-                break;
+        //std::cout << "adasdsdsad" << (*record == *dns->body->answers[0]->record) << std::endl;
 
-            case AAAA:
-                DEBUG_PRINT("AAAA", record->data.AAAA->ip6);
-                break;
-
-            case CNAME:
-                DEBUG_PRINT("CNAME", record->data.CNAME->cname);
-                break;
-
-            case MX:
-                DEBUG_PRINT("MX", record->data.MX->exchange);
-                break;
-
-            case NS:
-                DEBUG_PRINT("NS", record->data.NS->nsname);
-                break;
-
-            case SOA:
-                DEBUG_PRINT("SOA", record->data.SOA->mnname);
-                break;
-
-            case TXT:
-                DEBUG_PRINT("TXT", record->data.TXT->text);
-                break;
-
-            default:
-                break;
-        }
-
-        std::cout << std::endl;
     }
 }
 
@@ -338,7 +306,7 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
 
     /* allocates memory for all answer pointers */
     int answ_num = header->answers_number;
-    body->answers = new rr_answer*[ques_num];
+    body->answers = new rr_answer*[answ_num];
 
     /* loop over answers */
     for(int i = 0; i < answ_num; i++) {
@@ -365,7 +333,7 @@ rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
     return question;
 }
 
-//TODO: free malloc !!!
+//TODO: free free !!!
 rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
     rr_answer *answer;
 
@@ -375,8 +343,7 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
      * NAME is stored in shortened format, first two bits are '1' rest is integer representing offset in octets from
      * DNS datagram start
      */
-    std::string x = get_name(packet, header);
-    answer->qname = x;
+    answer->qname = get_name(packet, header);
     *packet += RESOURCE_RECORD_NAME_OFFSET;
 
     answer->type = htons(*(b16 *) *packet);

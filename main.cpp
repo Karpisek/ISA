@@ -6,14 +6,11 @@
 
 int main(int argc, char **argv) {
 
-    //global_statistics.emplace_back("ahoj");
-
-    //for (const auto &global_statistic : global_statistics) {
-    //    std::cout << global_statistic << std::endl;
-    //}
-
     /* user signal registration */
-    signal(SIGUSR1, send_statistics);
+    signal(SIGUSR1, print_statistics);
+
+    /* register alarm for sending to server */
+    signal(SIGALRM, send_statistics);
 
     sniff_handler *handler;
 

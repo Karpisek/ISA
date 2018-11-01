@@ -199,6 +199,9 @@ typedef enum _rr_tag {
 struct _rr_record {
     rr_tag type;
     rr_data data;
+    int count;
 };
+
+bool operator ==(rr_record record1, rr_record record2);
 
 #endif //ISA_RECORDS_H
