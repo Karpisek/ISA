@@ -153,10 +153,7 @@ void process_packet(const b8 *packet) {
         rr_record *record = dns->body->answers[i]->record;
 
         /* adding answers to global statistics */
-        global_statistics.push_back(record);
-
-        //std::cout << "adasdsdsad" << (*record == *dns->body->answers[0]->record) << std::endl;
-
+        add_to_statistics(record);
     }
 }
 
@@ -449,6 +446,7 @@ rr_record* create_rr_record(rr_data data, rr_tag tag) {
 
     new_data->type = tag;
     new_data->data = data;
+    new_data->count = 1;
 
     return new_data;
 }

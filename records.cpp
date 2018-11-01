@@ -21,15 +21,27 @@ bool operator==(rr_record record1, rr_record record2) {
             return record1.data.CNAME->cname == record2.data.CNAME->cname;
 
         case MX:
-            return record1.data.MX->preference == record2.data.MX->preference && record1.data.MX->exchange == record2.data.MX->exchange;
+            return
+            record1.data.MX->preference == record2.data.MX->preference &&
+            record1.data.MX->exchange == record2.data.MX->exchange;
 
         case NS:
             return record1.data.NS->nsname == record2.data.NS->nsname;
 
         case SOA:
-            return record1.data.SOA->mnname == record2.data.SOA->mnname;
+            return
+            record1.data.SOA->mnname == record2.data.SOA->mnname &&
+            record1.data.SOA->rname == record2.data.SOA->rname &&
+            record1.data.SOA->minimum == record2.data.SOA->minimum &&
+            record1.data.SOA->expire == record2.data.SOA->expire &&
+            record1.data.SOA->retry == record2.data.SOA->retry &&
+            record1.data.SOA->refresh == record2.data.SOA->refresh &&
+            record1.data.SOA->serial == record2.data.SOA->serial;
 
         case TXT:
+            return
+            record1.data.TXT->length == record2.data.TXT->length &&
+            record1.data.TXT->text == record2.data.TXT->text;
 
         default:
             break;
