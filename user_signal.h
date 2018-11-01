@@ -12,10 +12,12 @@
 #include <iostream>
 
 #include "shared.h"
+#include "error.h"
 
 void send_statistics(int signum);
 void print_statistics(int signum);
 const char *parse_stats(rr_record* record);
+void loop_and_print();
 
 
 #endif //ISA_USER_SIGNAL_H

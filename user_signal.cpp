@@ -5,13 +5,29 @@
 #include "user_signal.h"
 
 void print_statistics(int signum) {
-    std::cout << "<smazat !!!> actual statistic size: " << global_statistics.size() << std::endl;
 
-    for(auto record: global_statistics) {
-        std::cout << parse_stats(record) << std::endl;
+    int pid;
+
+    pid = fork();
+
+    if(pid == 0) {
+        std::cout << "<smazat !!!> actual statistic size: " << global_statistics.size() << std::endl;
+
+        for(auto record: global_statistics) {
+            printf("%d\n", record->count);
+            printf("%s\n", parse_stats(record));
+        }
+
+        std::cout << std::endl;
+        exit(0);
     }
 
-    std::cout << std::endl;
+    if(pid < 0){
+        raise(22, "Fork failed");
+    }
+
+    waitpid(-1, NULL, WNOHANG);
+
 }
 
 void send_statistics(int signum) {

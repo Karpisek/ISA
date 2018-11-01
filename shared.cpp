@@ -2,6 +2,7 @@
 // Created by Miroslav Karpíšek on 25/10/2018.
 //
 
+#include <iostream>
 #include "shared.h"
 
 std::vector <rr_record *> global_statistics;
@@ -10,6 +11,7 @@ void add_to_statistics(rr_record *new_record) {
     for(auto record : global_statistics) {
         if(*record == *new_record) {
             /* increment counter found the same record */
+            std::cout << record->count;
             record->count++;
             return;
         }
