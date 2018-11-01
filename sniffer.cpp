@@ -152,6 +152,9 @@ void process_packet(const b8 *packet) {
 
         rr_record *record = dns->body->answers[i]->record;
 
+        /* adding answers to global statistics */
+        global_statistics.push_back(record);
+
         switch (record->type) {
             case A:
                 DEBUG_PRINT("A", record->data.A->ip4);
@@ -424,6 +427,7 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     break;
 
                 default:
+                    std::cout << answer->type << std::endl;
                     raise(128, "unsupported DNS rr_record TYPE");
                     break;
 
