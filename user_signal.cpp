@@ -11,8 +11,6 @@ void print_statistics(int signum) {
     pid = fork();
 
     if(pid == 0) {
-        std::cout << "<smazat !!!> actual statistic size: " << global_statistics.size() << std::endl;
-
         for(auto answer: global_statistics) {
             std::cout << parse_stats(answer) << std::endl;
         }
@@ -31,15 +29,11 @@ void send_statistics(int signum) {
     pid = fork();
 
     if(pid == 0) {
-        std::cout << "<smazat !!!> actual statistic size: " << global_statistics.size() << "sending..." << std::endl;
-
         for(auto answer: global_statistics) {
             syslog_send(generate_syslog_header() + parse_stats(answer));
         }
 
-        std::cout << std::endl;
         exit(0);
-
     }
 
     /* ignoring signal */
@@ -105,8 +99,6 @@ std::string parse_stats(rr_answer* answer) {
             message += std::to_string(answer->record.SOA->expire);
             message += " ";
             message += std::to_string(answer->record.SOA->minimum);
-
-            std::cout << message;
             break;
 
         case DNS_TYPE_TXT:

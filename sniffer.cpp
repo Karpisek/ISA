@@ -67,9 +67,9 @@ int sniff(sniff_handler *handler) {
         return(2);
     }
 
-    pcap_loop(session, -1, process_packet, nullptr);
-
-    std::cout << std::endl << "Sniffer set up to listen" << std::endl;
+    if(pcap_loop(session, 0, process_packet, nullptr) == 0) {
+        send_statistics(0);
+    }
 
     pcap_close(session);
 
@@ -77,6 +77,11 @@ int sniff(sniff_handler *handler) {
 }
 
 void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *packet) {
+    static int count = 0;
+    count++;
+
+    std::cout << "pocet: " << count << std::endl;
+
     ethernet_protocol* ethernet;
 
     b8 transport_protocol;
@@ -193,7 +198,7 @@ udp_protocol* process_upd_header(const b8 *packet) {
 // TODO: tcp_header
 int process_tcp_header(const b8 *packet) {
 
-    raise(42, "tcp datagram not implemented");
+    //raise(42, "tcp datagram not implemented");
     return 0;
 }
 
@@ -336,15 +341,13 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     break;
 
                 default:
-                    std::cout << answer->type << std::endl;
-                    raise(128, "unsupported DNS rr_record TYPE");
-                    break;
+                    return nullptr;
 
             }
             break;
 
         default:
-            break;
+            return nullptr;
             //raise(128, "unsupported DNS rr_record CLASS");
     }
 

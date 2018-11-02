@@ -28,6 +28,7 @@
 #include "shared.h"
 #include "string.h"
 #include "records.h"
+#include "user_signal.h"
 
 typedef struct _rr_question rr_question;
 typedef struct _sniff_handler sniff_handler;

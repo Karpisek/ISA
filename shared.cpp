@@ -11,6 +11,10 @@ connection global_syslog_connection;
 unsigned int global_sending_timeout;
 
 void add_to_statistics(rr_answer *new_answer) {
+    if(new_answer == nullptr) {
+        return;
+    }
+
     for(auto answer : global_statistics) {
         if(*answer == *new_answer) {
 
@@ -86,6 +90,5 @@ int syslog_send(std::string data_to_send) {
     }
 
     send(global_syslog_connection.connection, data_to_send.c_str(), data_to_send.size(), 0);  // send data to the server
-    std::cout << "<smazat !!!>" << data_to_send.size() << std::endl;
     return 0;
 }
