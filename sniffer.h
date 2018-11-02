@@ -30,11 +30,7 @@
 #include "records.h"
 
 typedef struct _rr_question rr_question;
-typedef struct _rr_answer rr_answer;
-
-
 typedef struct _sniff_handler sniff_handler;
-
 
 /* Typedefs for better readability */
 typedef unsigned int b32;
@@ -277,7 +273,6 @@ typedef struct dns_protocol {
     dns_body* body;
 } dns_protocol;
 
-
 /*
  *  Question
  *
@@ -303,74 +298,6 @@ struct _rr_question {
     int qclass;
 };
 
-/*
- *  Resource Record
- *
- *  +-----------+-----------+-----------------------+
- *  |           0           |           1           |
- *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
- *  | 1| 1|            NAME_OFFSET                  |
- *  +-----------------------------------------------+
- *  |                     TYPE                      |
- *  +-----------------------------------------------+
- *  |                     CLASS                     |
- *  +-----------------------------------------------+
- *  |                      TTL                      |
- *  +   -   -   -   -   -   -   -   -   -   -   -   +
- *  |                      TTL                      |
- *  +-----------------------------------------------+
- *  |                      LEN                      |
- *  +-----------------------------------------------+
- *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ DATA~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
- *  +-----------------------------------------------+
- *
- *  NAME_OFFSET   - points to first occurance of NAME in DNS datagram
- *  TYPE    - type of DNS record
- *  CLASS   - class of DNS record
- *  TTL     - time to live
- *  LEN     - length of data
- *  DATA    - received record data
- *
- */
-
-#define RESOURCE_RECORD_NAME_OFFSET 2
-
-#define DNS_CLASS_IN    1
-
-#define DNS_TYPE_A      1
-#define DNS_TYPE_AAAA   28
-#define DNS_TYPE_CNAME  5
-#define DNS_TYPE_MX     15
-#define DNS_TYPE_NS     2
-#define DNS_TYPE_SOA    6
-#define DNS_TYPE_TXT    16
-// #define DNS_TYPE_SPF
-
-
-struct _rr_answer {
-    std::string qname;
-    int type;
-    int qclass;
-    int ttl;
-    int len;
-    rr_record *record;
-};
-
-/*
- * A RDATA
- *
- *  +---------------------------------------------------------------+
- *  |       0       |       1       |       2       |       3       |
- *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                            ADDRESS                            |
- *  +-------------------------------+-------------------------------+
- *
- *  ADDRESS - 32 bit Internet IPv4 address
- *
- */
-
-
-
 struct _sniff_handler {
     pcap_t *session;
     b32 ip_address;
@@ -381,8 +308,8 @@ struct _sniff_handler {
 sniff_handler *init_interface(char *dev);
 sniff_handler *init_file(char *filename);
 
-int sniff(sniff_handler *handler, int duration);
-void process_packet(const b8 *packet);
+int sniff(sniff_handler *handler);
+void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *packet);
 
 /* L2 header processing */
 ethernet_protocol* process_ether_header(const b8 **packet);
@@ -406,14 +333,13 @@ rr_answer* get_answers_record(const b8 **packet, raw_dns_header *header);
 std::string get_name(const b8 **packet, raw_dns_header *header);
 
 /* records parsers */
-rr_record* create_rr_record(rr_data data, rr_tag tag);
-rr_record* get_a_record(const b8 *packet);
-rr_record* get_aaaa_record(const b8 *packet);
-rr_record* get_cname_record(const b8 *packet, raw_dns_header *header);
-rr_record* get_mx_record(const b8 *packet, raw_dns_header *header);
-rr_record* get_ns_record(const b8 *packet, raw_dns_header *header);
-rr_record* get_soa_record(const b8 *packet, raw_dns_header *header);
-rr_record* get_txt_record(const b8 *packet, raw_dns_header *header);
+rr_data get_a_record(const b8 *packet);
+rr_data get_aaaa_record(const b8 *packet);
+rr_data get_cname_record(const b8 *packet, raw_dns_header *header);
+rr_data get_mx_record(const b8 *packet, raw_dns_header *header);
+rr_data get_ns_record(const b8 *packet, raw_dns_header *header);
+rr_data get_soa_record(const b8 *packet, raw_dns_header *header);
+rr_data get_txt_record(const b8 *packet, raw_dns_header *header);
 
 #endif //ISA_SNIFFER_H
 

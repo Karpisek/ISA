@@ -54,18 +54,23 @@ void debug_print_args(argument interface, argument resource, argument server, ar
         std::cout << "t: " << timeout.value.i << std::endl;
 }
 
-void check_collisions(argument interface, argument resource, argument timeout) {
+void check_collisions(argument interface, argument resource, argument server, argument timeout) {
 
     // -r and -i cannot be defined together
-    if(resource.defined and interface.defined) {
+    if(resource.defined && interface.defined) {
         std::cerr << "argument -r and -i cannot be defined together" << std::endl;
         exit(EXIT_FAILURE);
     }
 
     // -r and -t cannot be defined together
-    if(resource.defined and timeout.defined) {
+    if(resource.defined && timeout.defined) {
         std::cerr << "argument -r and -t cannot be defined together" << std::endl;
         exit(EXIT_FAILURE);
+    }
+
+    // -t and not -s defined
+    if(timeout.defined && !server.defined) {
+        exit(0);
     }
 }
 

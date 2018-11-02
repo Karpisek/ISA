@@ -30,6 +30,6 @@ struct argument {
 void parse_input(int argc, char **argv, argument *interface, argument *resource, argument *server, argument *timeout);
 
 void debug_print_args(argument interface, argument resource, argument server, argument timeout);
-void check_collisions(argument interface, argument resource, argument timeout);
+void check_collisions(argument interface, argument resource, argument server, argument timeout);
 
 #endif //ISA_INPUT_H

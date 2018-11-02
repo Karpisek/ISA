@@ -17,7 +17,20 @@ typedef struct _txt_record txt_record;
 typedef struct _spf_record spf_record;
 
 typedef union _rr_data rr_data;
-typedef struct _rr_record rr_record;
+typedef struct _rr_answer rr_answer;
+
+/*
+ * A RDATA
+ *
+ *  +---------------------------------------------------------------+
+ *  |       0       |       1       |       2       |       3       |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                            ADDRESS                            |
+ *  +-------------------------------+-------------------------------+
+ *
+ *  ADDRESS - 32 bit Internet IPv4 address
+ *
+ */
 
 struct _a_record{
     std::string ip4;
@@ -185,6 +198,60 @@ union _rr_data {
     spf_record* SPF;
 };
 
+/*
+ *  Resource Record
+ *
+ *  +-----------+-----------+-----------------------+
+ *  |           0           |           1           |
+ *  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ *  | 1| 1|            NAME_OFFSET                  |
+ *  +-----------------------------------------------+
+ *  |                     TYPE                      |
+ *  +-----------------------------------------------+
+ *  |                     CLASS                     |
+ *  +-----------------------------------------------+
+ *  |                      TTL                      |
+ *  +   -   -   -   -   -   -   -   -   -   -   -   +
+ *  |                      TTL                      |
+ *  +-----------------------------------------------+
+ *  |                      LEN                      |
+ *  +-----------------------------------------------+
+ *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ DATA~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ *  +-----------------------------------------------+
+ *
+ *  NAME_OFFSET   - points to first occurance of NAME in DNS datagram
+ *  TYPE    - type of DNS record
+ *  CLASS   - class of DNS record
+ *  TTL     - time to live
+ *  LEN     - length of data
+ *  DATA    - received record data
+ *
+ */
+
+#define RESOURCE_RECORD_NAME_OFFSET 2
+
+#define DNS_CLASS_IN    1
+
+#define DNS_TYPE_A      1
+#define DNS_TYPE_AAAA   28
+#define DNS_TYPE_CNAME  5
+#define DNS_TYPE_MX     15
+#define DNS_TYPE_NS     2
+#define DNS_TYPE_SOA    6
+#define DNS_TYPE_TXT    16
+// #define DNS_TYPE_SPF
+
+
+struct _rr_answer {
+    std::string qname;
+    int type;
+    int qclass;
+    int ttl;
+    int len;
+    rr_data record;
+    int count;
+};
+
 typedef enum _rr_tag {
     A,
     AAAA,
@@ -196,12 +263,6 @@ typedef enum _rr_tag {
     SPF,
 } rr_tag;
 
-struct _rr_record {
-    rr_tag type;
-    rr_data data;
-    int count;
-};
-
-bool operator ==(rr_record record1, rr_record record2);
+bool operator ==(rr_answer answer1, rr_answer answer2);
 
 #endif //ISA_RECORDS_H

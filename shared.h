@@ -5,12 +5,34 @@
 #ifndef ISA_SHARED_H
 #define ISA_SHARED_H
 
+#include <iostream>
 #include <vector>
 #include <string>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <cstdio>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
 #include "records.h"
+#include "error.h"
 
-extern std::vector <rr_record *> global_statistics;
+typedef struct _connection {
+    bool enstablished;
+    int connection;
+} connection;
 
-void add_to_statistics(rr_record *record);
+extern unsigned int global_sending_timeout;
+extern std::vector <rr_answer *> global_statistics;
+extern connection global_syslog_connection;
+
+/* statistic procedures */
+void add_to_statistics(rr_answer *record);
+
+/* sender procedures */
+int init_sender(const char *addr_str);
+int close_connection();
+int syslog_send(std::string data_to_send);
 
 #endif //ISA_SHARED_H

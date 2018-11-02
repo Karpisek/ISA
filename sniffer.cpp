@@ -41,11 +41,9 @@ sniff_handler *init_file(char *filename) {
     return handler;
 }
 
-int sniff(sniff_handler *handler, int duration) {
+int sniff(sniff_handler *handler) {
 
     struct bpf_program filter_exp = {};		/* The compiled filter expression */
-    const b8 *packet;                       /* Packet that pcap gives us */
-    struct pcap_pkthdr header = {};	        /* The header that pcap gives us */
 
     char *dev = handler->dev;
     pcap_t *session = handler->session;
@@ -69,18 +67,7 @@ int sniff(sniff_handler *handler, int duration) {
         return(2);
     }
 
-    struct timeval time = {};
-    gettimeofday(&time, nullptr);
-
-    long timeout = time.tv_sec + duration;
-
-    while(std::time(nullptr) < timeout) {
-        packet = pcap_next(session, &header);
-
-        if(packet != nullptr) {
-            process_packet(packet);
-        }
-    }
+    pcap_loop(session, -1, process_packet, nullptr);
 
     std::cout << std::endl << "Sniffer set up to listen" << std::endl;
 
@@ -89,7 +76,7 @@ int sniff(sniff_handler *handler, int duration) {
     return 0;
 }
 
-void process_packet(const b8 *packet) {
+void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *packet) {
     ethernet_protocol* ethernet;
 
     b8 transport_protocol;
@@ -141,9 +128,8 @@ void process_packet(const b8 *packet) {
     dns = process_dns(packet);
 
     for(int i = 0; i < dns->header->answers_number; i++) {
-
         /* adding answers to global statistics */
-        add_to_statistics(dns->body->answers[i]->record);
+        add_to_statistics(dns->body->answers[i]);
     }
 }
 
@@ -300,7 +286,9 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
      * NAME is stored in shortened format, first two bits are '1' rest is integer representing offset in octets from
      * DNS datagram start
      */
-    answer->qname = get_name(packet, header);
+    const b8* packet_copy = (b8 *) *packet;
+
+    answer->qname = get_name(&packet_copy, header);
     *packet += RESOURCE_RECORD_NAME_OFFSET;
 
     answer->type = htons(*(b16 *) *packet);
@@ -360,7 +348,6 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
             //raise(128, "unsupported DNS rr_record CLASS");
     }
 
-
     //jump over data
     *packet += answer->len;
 
@@ -373,6 +360,8 @@ std::string get_name(const b8 **packet, raw_dns_header *header) {
 
     if((ntohs(*(b16 *) *packet) & 0b1100000000000000) == 0b1100000000000000) {
         int offset = ntohs(*(b16 *) *packet) & 0b0011111111111111;
+        *packet += sizeof(b16);
+
         const b8 *name_start = (const b8 *) header + offset;
 
         return name + get_name(&name_start, header);
@@ -395,24 +384,11 @@ std::string get_name(const b8 **packet, raw_dns_header *header) {
 
     name += '.';
 
-    return name +  get_name(packet, header);
+    return name + get_name(packet, header);
 }
 
 // TODO: free mem !!!
-rr_record* create_rr_record(rr_data data, rr_tag tag) {
-    rr_record* new_data;
-
-    new_data = new rr_record;
-
-    new_data->type = tag;
-    new_data->data = data;
-    new_data->count = 1;
-
-    return new_data;
-}
-
-// TODO: free mem !!!
-rr_record* get_a_record(const b8 *packet) {
+rr_data get_a_record(const b8 *packet) {
     char buf[INET_ADDRSTRLEN];
     rr_data data;
     a_record *record;
@@ -422,11 +398,11 @@ rr_record* get_a_record(const b8 *packet) {
 
     data.A = record;
 
-    return create_rr_record(data, A);
+    return data;
 }
 
 // TODO: free mem !!!
-rr_record* get_aaaa_record(const b8 *packet) {
+rr_data get_aaaa_record(const b8 *packet) {
     char buf[INET6_ADDRSTRLEN];
     rr_data data;
     aaaa_record *record;
@@ -437,11 +413,11 @@ rr_record* get_aaaa_record(const b8 *packet) {
 
     data.AAAA = record;
 
-    return create_rr_record(data, AAAA);
+    return data;
 }
 
 // TODO: free mem !!!
-rr_record* get_cname_record(const b8 *packet, raw_dns_header *header) {
+rr_data get_cname_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     cname_record *record;
 
@@ -451,11 +427,11 @@ rr_record* get_cname_record(const b8 *packet, raw_dns_header *header) {
 
     data.CNAME = record;
 
-    return create_rr_record(data, CNAME);
+    return data;
 }
 
 // TODO: free mem !!!
-rr_record* get_mx_record(const b8 *packet, raw_dns_header *header) {
+rr_data get_mx_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     mx_record *record;
 
@@ -468,11 +444,11 @@ rr_record* get_mx_record(const b8 *packet, raw_dns_header *header) {
 
     data.MX = record;
 
-    return create_rr_record(data, MX);
+    return data;
 }
 
 // TODO: free mem !!!
-rr_record* get_ns_record(const b8 *packet, raw_dns_header *header) {
+rr_data get_ns_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     ns_record *record;
 
@@ -482,11 +458,11 @@ rr_record* get_ns_record(const b8 *packet, raw_dns_header *header) {
 
     data.NS = record;
 
-    return create_rr_record(data, NS);
+    return data;
 }
 
 // TODO: free mem !!!
-rr_record* get_soa_record(const b8 *packet, raw_dns_header *header) {
+rr_data get_soa_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     soa_record *record;
 
@@ -494,29 +470,29 @@ rr_record* get_soa_record(const b8 *packet, raw_dns_header *header) {
 
     record->mnname = get_name(&packet, header);
     record->rname = get_name(&packet, header);
-    record->serial = ntohs( *(b32 *) packet);
+
+    record->serial = ntohl( *(b32 *) packet);
     packet += sizeof(b32);
 
-    record->refresh = ntohs( *(b32 *) packet);
+    record->refresh = ntohl( *(b32 *) packet);
     packet += sizeof(b32);
 
-    record->retry = ntohs( *(b32 *) packet);
+    record->retry = ntohl( *(b32 *) packet);
     packet += sizeof(b32);
 
-    record->expire = ntohs( *(b32 *) packet);
+    record->expire = ntohl( *(b32 *) packet);
     packet += sizeof(b32);
 
-    record->minimum = ntohs( *(b32 *) packet);
+    record->minimum = ntohl( *(b32 *) packet);
     packet += sizeof(b32);
-
 
     data.SOA = record;
 
-    return create_rr_record(data, SOA);
+    return data;
 }
 
 // TODO: free mem !!!
-rr_record* get_txt_record(const b8 *packet, raw_dns_header *header) {
+rr_data get_txt_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     txt_record *record;
 
@@ -532,21 +508,19 @@ rr_record* get_txt_record(const b8 *packet, raw_dns_header *header) {
 
     data.TXT = record;
 
-    return create_rr_record(data, TXT);
+    return data;
 }
 
 // TODO: free mem !!!
-rr_record* get_spf_record(const b8 *packet, raw_dns_header *header) {
+rr_data get_spf_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     spf_record *record;
 
     record = new spf_record;
 
-
-
     data.SPF = record;
 
-    return create_rr_record(data, SPF);
+    return data;
 }
 
 
