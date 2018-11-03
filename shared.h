@@ -29,7 +29,7 @@ typedef struct _statistic {
 } statistic;
 
 extern unsigned int global_sending_timeout;
-extern std::vector < *> global_statistics;
+extern std::vector <statistic *> global_statistics;
 extern connection global_syslog_connection;
 
 /* statistic procedures */
@@ -39,5 +39,9 @@ void add_to_statistics(rr_answer *record);
 int init_sender(const char *addr_str);
 int close_connection();
 int syslog_send(std::string data_to_send);
+
+/* stats */
+std::string parse_stats(rr_answer* record);
+
 
 #endif //ISA_SHARED_H

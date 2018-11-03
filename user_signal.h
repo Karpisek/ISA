@@ -26,7 +26,6 @@
 
 void send_statistics(int signum);
 void print_statistics(int signum);
-std::string parse_stats(rr_answer* record);
 std::string generate_syslog_header();
 void loop_and_print();
 

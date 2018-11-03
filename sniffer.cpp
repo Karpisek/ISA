@@ -71,6 +71,7 @@ int sniff(sniff_handler *handler) {
         send_statistics(0);
     }
 
+    print_statistics(1);
     pcap_close(session);
 
     return 0;
@@ -133,11 +134,12 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
     dns = process_dns(packet, transport_protocol == PRT_TCP);
 
     for(int i = 0; i < dns->header->answers_number; i++) {
+
         /* adding answers to global statistics */
         add_to_statistics(dns->body->answers[i]);
     }
 
-    print_statistics(1);
+    delete dns;
 }
 
 ethernet_protocol* process_ether_header(const unsigned char **packet) {
