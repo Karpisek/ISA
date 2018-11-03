@@ -23,6 +23,7 @@
 #include <netinet/if_ether.h>
 #include <arpa/inet.h>
 #include <string>
+#include <sstream>
 
 #include "error.h"
 #include "shared.h"
@@ -193,6 +194,44 @@ typedef struct udp_protocol{
     b16 sum;
 } udp_protocol;
 
+/* TCP header
+ *  +---------------------------------------------------------------+
+ *  |       0       |       1       |       2       |       3       |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |              SRC              |              DST              |
+ *  +-------------------------------+-------------------------------+
+ *  |                            SEQ_NUM                            |
+ *  +-------------------------------+-------------------------------+
+ *  |                            ACK_NUM                            |
+ *  +---------------+---------------+-------------------------------+
+ *  | OFSET |0|0|0|N|C|E|U|A|P|R|S|F|           WIN_SIZE            |
+ *  +---------------+---------------+-------------------------------+
+ *  |           CHECKSUM            |            URGENT             |
+ *  +---------------+---------------+-------------------------------+
+ *  |                          OPTIONS [...]                        |
+ *  +---------------------------------------------------------------+
+ *  SRC - source port
+ *  DST - destination port
+ *  SEQ_NUM - Sequence number
+ *  ACK_NUM - Acknowledgment number
+ *  OFSET   - Data offset in 32-bit words
+ *  WIN_SIZE - window size
+ */
+
+#define TCP_HEAD_LEN(offset_n)    ((offset_n >> 4) * 4)
+
+typedef struct tcp_protocol{
+    b16 src;
+    b16 dst;
+    b32 seq;
+    b32 ack;
+    b8 offset_n;
+    b8 flags;
+    b16 window;
+    b16 checksum;
+    b16 urgent;
+} tcp_protocol;
+
 /* DNS header
  *
  *  +-----------------------+-----------------------+-----------------------+-----------------------+
@@ -243,7 +282,7 @@ typedef struct udp_protocol{
  *
  */
 
-#define DNS_HEAD_LEN 12
+#define DNS_HEAD_LEN(tcp_flag)      (tcp_flag ? 14 : 12)
 
 typedef struct raw_dns_header {
     b16 identification;
@@ -262,6 +301,7 @@ typedef struct dns_header {
     int answers_number;
     int authorities_number;
     int additions_number;
+    int length;     /* undefined on UDP, works only with tcp*/
 } dns_header;
 
 typedef struct dns_body {
@@ -321,17 +361,17 @@ ip6_protocol* process_ip6_header(const b8 *packet);
 
 /* L4 header processing */
 udp_protocol* process_upd_header(const b8 *packet);
-int process_tcp_header(const b8 *packet);
+tcp_protocol* process_tcp_header(const b8 *packet);
 
 /* L5 header processing */
-dns_protocol* process_dns(const b8 *packet);
-dns_header* get_dns_header(const b8 *packet);
+dns_protocol* process_dns(const b8 *packet, bool tcp_flag);
+dns_header* get_dns_header(const b8 *packet, bool tcp_flag);
 dns_body* get_dns_body(const b8 **packet, dns_header *header);
 
 rr_question* get_query_record(const b8 **packet, raw_dns_header *header);
 rr_answer* get_answers_record(const b8 **packet, raw_dns_header *header);
 
-std::string get_name(const b8 **packet, raw_dns_header *header);
+std::string get_name(const b8 **packet, raw_dns_header *header, int *length);
 
 /* records parsers */
 rr_data get_a_record(const b8 *packet);
@@ -340,7 +380,9 @@ rr_data get_cname_record(const b8 *packet, raw_dns_header *header);
 rr_data get_mx_record(const b8 *packet, raw_dns_header *header);
 rr_data get_ns_record(const b8 *packet, raw_dns_header *header);
 rr_data get_soa_record(const b8 *packet, raw_dns_header *header);
-rr_data get_txt_record(const b8 *packet, raw_dns_header *header);
+rr_data get_txt_record(const b8 *packet);
+rr_data get_dnskey_record(const b8 *packet, const rr_answer *answer);
+rr_data get_rsig_record(const b8 *packet, const rr_answer *answer);
 
 #endif //ISA_SNIFFER_H
 

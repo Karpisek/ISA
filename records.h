@@ -14,8 +14,8 @@ typedef struct _mx_record mx_record;
 typedef struct _ns_record ns_record;
 typedef struct _soa_record soa_record;
 typedef struct _txt_record txt_record;
-typedef struct _spf_record spf_record;
 typedef struct _dnskey_record dnskey_record;
+typedef struct _rsig_record rsig_record;
 
 typedef union _rr_data rr_data;
 typedef struct _rr_answer rr_answer;
@@ -190,9 +190,9 @@ struct _txt_record{
  *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~PUBLIC_KEY ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
  *  +---------------------------------------------------------------+
  *
- *  FLAGS       - just pritn hexa
+ *  FLAGS       - flags
  *  PROTOCOL    - must be 3
- *  ALG         -
+ *  ALG         - used algorithm
  *      0 = RESERVED
  *      1 = RSAMD5
  *      2 = DH
@@ -211,8 +211,50 @@ struct _txt_record{
 #define DNSKEY_HASH_LEN(len)    (len - 4)
 
 struct _dnskey_record {
-
+    int flags;
+    int protocol;
+    int algorithm;
+    std::string public_key;
 };
+
+/*
+ * RSIG RDATA
+ *
+ *  +---------------------------------------------------------------+
+ *  |       0       |       1       |       2       |       3       |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |        Type Covered           |  Algorithm    |     Labels    |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                         Original TTL                          |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                      Signature Expiration                     |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                      Signature Inception                      |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |            Key Tag            |                               /
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         Signer's Name         /
+ *  /                                                               /
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  /                                                               /
+ *  /                            Signature                          /
+ *  /                                                               /
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ *
+ */
+
+struct _rsig_record {
+    int type;
+    int algorithm;
+    int labels;
+    int ttl;
+    int expiration;
+    int inception;
+    int key_tag;
+    std::string signers_name;
+    std::string signature;
+};
+
 
 union _rr_data {
     a_record* A;
@@ -222,7 +264,7 @@ union _rr_data {
     ns_record* NS;
     soa_record* SOA;
     txt_record* TXT;
-    spf_record* SPF;
+    dnskey_record* DNSKEY;
 };
 
 /*
@@ -268,17 +310,6 @@ struct _rr_answer {
     rr_data record;
     int count;
 };
-
-typedef enum _rr_tag {
-    A,
-    AAAA,
-    CNAME,
-    MX,
-    NS,
-    SOA,
-    TXT,
-    SPF,
-} rr_tag;
 
 bool operator ==(rr_answer answer1, rr_answer answer2);
 

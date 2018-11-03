@@ -84,7 +84,8 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
 
     b8 transport_protocol;
 
-    udp_protocol* udp;
+    tcp_protocol* tcp;
+
     dns_protocol* dns;
 
     /* L2 */
@@ -115,12 +116,13 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
     /* L4 */
     switch(transport_protocol) {
         case PRT_UDP:
-            udp = process_upd_header(packet);
+            process_upd_header(packet);
             packet += UDP_HEAD_LEN;
             break;
 
         case PRT_TCP:
-            process_tcp_header(packet);
+            tcp = process_tcp_header(packet);
+            packet += TCP_HEAD_LEN(tcp->offset_n);
             break;
 
         default:
@@ -128,12 +130,14 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
     }
 
     /* L4 */
-    dns = process_dns(packet);
+    dns = process_dns(packet, transport_protocol == PRT_TCP);
 
     for(int i = 0; i < dns->header->answers_number; i++) {
         /* adding answers to global statistics */
         add_to_statistics(dns->body->answers[i]);
     }
+
+    print_statistics(1);
 }
 
 ethernet_protocol* process_ether_header(const unsigned char **packet) {
@@ -191,24 +195,27 @@ udp_protocol* process_upd_header(const b8 *packet) {
     udp_protocol *udp;     /* UDP header */
 
     udp = (udp_protocol *) packet;
+
+    return udp;
 }
 
-// TODO: tcp_header
-int process_tcp_header(const b8 *packet) {
+tcp_protocol* process_tcp_header(const b8 *packet) {
+    tcp_protocol *tcp;
 
-    //raise(42, "tcp datagram not implemented");
-    return 0;
+    tcp = (tcp_protocol *) packet;
+
+    return tcp;
 }
 
-dns_protocol* process_dns(const b8 *packet) {
+dns_protocol* process_dns(const b8 *packet, bool tcp_flag) {
     dns_protocol *dns;              /* DNS protocol */
 
     /* allocation memory for dns_protocol structure */
     dns = new dns_protocol;
 
     /* pointing to dns_header */
-    dns->header = get_dns_header(packet);
-    packet += DNS_HEAD_LEN;
+    dns->header = get_dns_header(packet, tcp_flag);
+    packet += DNS_HEAD_LEN(tcp_flag);
 
     /* receiving dns_body */
     dns->body = get_dns_body(&packet, dns->header);
@@ -217,13 +224,19 @@ dns_protocol* process_dns(const b8 *packet) {
 }
 
 // todo free mem
-dns_header* get_dns_header(const b8 *packet) {
+dns_header* get_dns_header(const b8 *packet, bool tcp_flag) {
     raw_dns_header *raw_header;
     dns_header *header;
 
-    raw_header = (raw_dns_header *)packet;
-
     header = new dns_header;
+
+    /* TCP adds 2 octets of length on start of dns_header */
+    if(tcp_flag) {
+        header->length = ntohs( *(b16*) packet);
+        packet += sizeof(b16);
+    }
+
+    raw_header = (raw_dns_header *)packet;
 
     header->raw_header = raw_header;
     header->identification = ntohs(raw_header->identification);
@@ -337,7 +350,11 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     break;
 
                 case DNS_TYPE_TXT:
-                    answer->record = get_txt_record(*packet, header);
+                    answer->record = get_txt_record(*packet);
+                    break;
+
+                case DNS_TYPE_DNSKEY:
+                    answer->record = get_dnskey_record(*packet, answer);
                     break;
 
                 default:
@@ -357,7 +374,7 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
     return answer;
 }
 
-std::string get_name(const b8 **packet, raw_dns_header *header) {
+int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
 
     std::string name;
 
@@ -367,7 +384,7 @@ std::string get_name(const b8 **packet, raw_dns_header *header) {
 
         const b8 *name_start = (const b8 *) header + offset;
 
-        return name + get_name(&name_start, header);
+        return name + get_name(&name_start, header, );
     }
 
     int next_label_size = **packet;
@@ -495,7 +512,7 @@ rr_data get_soa_record(const b8 *packet, raw_dns_header *header) {
 }
 
 // TODO: free mem !!!
-rr_data get_txt_record(const b8 *packet, raw_dns_header *header) {
+rr_data get_txt_record(const b8 *packet) {
     rr_data data;
     txt_record *record;
 
@@ -514,12 +531,62 @@ rr_data get_txt_record(const b8 *packet, raw_dns_header *header) {
     return data;
 }
 
-rr_data get_dnskey_record(const b8 *packet, raw_dns_header *header) {
+rr_data get_dnskey_record(const b8 *packet, const rr_answer *answer) {
     rr_data data;
     dnskey_record *record;
 
-    record = new txt_record;
+    record = new dnskey_record;
 
+    record->flags = ntohs( *(b16 *) packet);
+    packet += sizeof(b16);
+
+    record->protocol = ntohs(*packet);
+    packet++;
+
+    record->algorithm = ntohs(*packet);
+    packet++;
+
+    std::stringstream stream;
+    for(int i = 0; i < DNSKEY_HASH_LEN(answer->len); i++) {
+        stream << std::hex << *packet;
+        packet++;
+    }
+
+    record->public_key = stream.str();
+
+    data.DNSKEY = record;
+
+    return data;
+}
+
+rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header) {
+    rr_data data;
+    rsig_record *record;
+
+    record = new rsig_record;
+
+    record->type = ntohs( *(b16 *) packet);
+    packet += sizeof(b16);
+
+    record->algorithm = ntohs(*packet);
+    packet++;
+
+    record->labels = ntohs(*packet);
+    packet++;
+
+    record->ttl = ntohl(* (b32 *)packet);
+    packet += sizeof(b32);
+
+    record->expiration = ntohl(* (b32 *)packet);
+    packet += sizeof(b32);
+
+    record->inception = ntohl(* (b32 *) packet);
+    packet += sizeof(b32);
+
+    record->key_tag = ntohs(* (b16 *) packet);
+    packet += sizeof(b16);
+
+    record->signers_name = get_name(&packet, header);
 
 }
 
