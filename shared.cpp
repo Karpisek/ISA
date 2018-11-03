@@ -89,6 +89,7 @@ int syslog_send(std::string data_to_send) {
         return 1;
     }
 
+    std::cout << data_to_send.c_str() << std::endl;
     send(global_syslog_connection.connection, data_to_send.c_str(), data_to_send.size(), 0);  // send data to the server
     return 0;
 }

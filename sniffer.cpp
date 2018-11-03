@@ -80,8 +80,6 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
     static int count = 0;
     count++;
 
-    std::cout << "pocet: " << count << std::endl;
-
     ethernet_protocol* ethernet;
 
     b8 transport_protocol;
@@ -286,6 +284,8 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
     rr_answer *answer;
 
     answer = new rr_answer;
+
+    answer->count = 1;
 
     /*
      * NAME is stored in shortened format, first two bits are '1' rest is integer representing offset in octets from
@@ -514,16 +514,14 @@ rr_data get_txt_record(const b8 *packet, raw_dns_header *header) {
     return data;
 }
 
-// TODO: free mem !!!
-rr_data get_spf_record(const b8 *packet, raw_dns_header *header) {
+rr_data get_dnskey_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
-    spf_record *record;
+    dnskey_record *record;
 
-    record = new spf_record;
+    record = new txt_record;
 
-    data.SPF = record;
 
-    return data;
 }
+
 
 

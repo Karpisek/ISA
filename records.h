@@ -15,6 +15,7 @@ typedef struct _ns_record ns_record;
 typedef struct _soa_record soa_record;
 typedef struct _txt_record txt_record;
 typedef struct _spf_record spf_record;
+typedef struct _dnskey_record dnskey_record;
 
 typedef union _rr_data rr_data;
 typedef struct _rr_answer rr_answer;
@@ -32,6 +33,8 @@ typedef struct _rr_answer rr_answer;
  *
  */
 
+#define DNS_TYPE_A      1
+
 struct _a_record{
     std::string ip4;
 };
@@ -48,6 +51,7 @@ struct _a_record{
  *  ADDRESS - 128 bit Internet IPv6 address
  *
  */
+#define DNS_TYPE_AAAA   28
 
 struct _aaaa_record{
     std::string ip6;
@@ -65,6 +69,7 @@ struct _aaaa_record{
  *  CNAME - again name in labels
  *
  */
+#define DNS_TYPE_CNAME  5
 
 struct _cname_record{
     std::string cname;
@@ -85,6 +90,7 @@ struct _cname_record{
  *  EXCHANGE    - labels specifies a host willing to act as a mail exchange for the owner
  *
  */
+#define DNS_TYPE_MX     15
 
 struct _mx_record{
     int preference;
@@ -103,6 +109,7 @@ struct _mx_record{
  *  NSNAME - name in labels specifies a host which should be authoritative
  *
  */
+#define DNS_TYPE_NS     2
 
 struct _ns_record{
     std::string nsname;
@@ -140,6 +147,7 @@ struct _ns_record{
  *  MINIMUM - minimum TTL field that should be exported with any RR from this zone.
  *
  */
+#define DNS_TYPE_SOA    6
 
 struct _soa_record{
     std::string mnname;
@@ -164,6 +172,7 @@ struct _soa_record{
  *  TXT - characters
  *
  */
+#define DNS_TYPE_TXT    16
 
 struct _txt_record{
     int length;
@@ -171,20 +180,38 @@ struct _txt_record{
 };
 
 /*
- * SPF RDATA
+ * DNSKEY RDATA
  *
  *  +---------------------------------------------------------------+
- *  |       0       |                ~                              |
+ *  |       0       |       1       |       2       |       3       |
  *  +---------------+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |      LEN      |              TXT                              |
+ *  |             FLAGS             |    PROTOCOL   |      ALG      |
  *  +---------------+---------------+---------------+---------------+
+ *  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~PUBLIC_KEY ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+ *  +---------------------------------------------------------------+
  *
- *  TXT - single string of text
+ *  FLAGS       - just pritn hexa
+ *  PROTOCOL    - must be 3
+ *  ALG         -
+ *      0 = RESERVED
+ *      1 = RSAMD5
+ *      2 = DH
+ *      3 = DSA
+ *      4 = ECC
+ *      5 = RSASHA1
+ *    252 = INDIRECT
+ *    253 = PRIVATEDNS
+ *    254 = PRIVATEOID
+ *    255 = RESERVED
+ *
+ *  PUBLIC_KEY =
  */
 
-// TODO SPF
-struct _spf_record{
-    std::string text;
+#define DNS_TYPE_DNSKEY 48
+#define DNSKEY_HASH_LEN(len)    (len - 4)
+
+struct _dnskey_record {
+
 };
 
 union _rr_data {
@@ -231,16 +258,6 @@ union _rr_data {
 #define RESOURCE_RECORD_NAME_OFFSET 2
 
 #define DNS_CLASS_IN    1
-
-#define DNS_TYPE_A      1
-#define DNS_TYPE_AAAA   28
-#define DNS_TYPE_CNAME  5
-#define DNS_TYPE_MX     15
-#define DNS_TYPE_NS     2
-#define DNS_TYPE_SOA    6
-#define DNS_TYPE_TXT    16
-// #define DNS_TYPE_SPF
-
 
 struct _rr_answer {
     std::string qname;
