@@ -586,8 +586,13 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
     record->key_tag = ntohs(* (b16 *) packet);
     packet += sizeof(b16);
 
-    int length = get_name(&packet, header, &record->signers_name);
+    int signers_name_length = get_name(&packet, header, &record->signers_name);
 
+    record->signature = base64_encode(packet, (unsigned int) DNSRSIG_HASH_LEN(answer->len, signers_name_length));
+
+    data.RSIG = record;
+
+    return data;
 }
 
 

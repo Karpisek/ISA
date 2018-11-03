@@ -23,8 +23,13 @@ typedef struct _connection {
     int connection;
 } connection;
 
+typedef struct _statistic {
+    std::string text;
+    int count;
+} statistic;
+
 extern unsigned int global_sending_timeout;
-extern std::vector <rr_answer *> global_statistics;
+extern std::vector < *> global_statistics;
 extern connection global_syslog_connection;
 
 /* statistic procedures */

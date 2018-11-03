@@ -243,6 +243,7 @@ struct _dnskey_record {
  *
  */
 #define DNS_TYPE_RSIG 46
+#define DNSRSIG_HASH_LEN(len, signers_name_len)     (len - signers_name_len - 18)
 
 struct _rsig_record {
     int type;
@@ -266,6 +267,7 @@ union _rr_data {
     soa_record* SOA;
     txt_record* TXT;
     dnskey_record* DNSKEY;
+    rsig_record* RSIG;
 };
 
 /*

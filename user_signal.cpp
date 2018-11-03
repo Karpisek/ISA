@@ -118,6 +118,64 @@ std::string parse_stats(rr_answer* answer) {
             message += " ";
             message += answer->record.DNSKEY->public_key;
 
+        case DNS_TYPE_RSIG:
+            message += "RSIG";
+            message += " ";
+            switch (answer->record.RSIG->type) {
+                case DNS_TYPE_A:
+                    message += "A" ;
+                    break;
+
+                case DNS_TYPE_AAAA:
+                    message += "AAAA";
+                    break;
+
+                case DNS_TYPE_CNAME:
+                    message += "CNAME";
+                    break;
+
+                case DNS_TYPE_MX:
+                    message += "MX";
+                    break;
+
+                case DNS_TYPE_NS:
+                    message += "NS";
+                    break;
+
+                case DNS_TYPE_SOA:
+                    message += "SOA";
+                    break;
+
+                case DNS_TYPE_TXT:
+                    message += "TXT";
+                    break;
+
+                case DNS_TYPE_DNSKEY:
+                    message += "DNSKEY";
+
+                default:
+                    break;
+            }
+
+            message += " ";
+            message += std::to_string(answer->record.RSIG->algorithm);
+            message += " ";
+            message += std::to_string(answer->record.RSIG->labels);
+            message += " ";
+            message += std::to_string(answer->record.RSIG->ttl);
+            message += " ";
+            message += std::to_string(answer->record.RSIG->expiration);
+            message += " ";
+            message += std::to_string(answer->record.RSIG->inception);
+            message += " ";
+            message += std::to_string(answer->record.RSIG->key_tag);
+            message += " ";
+            message += answer->record.RSIG->signers_name;
+            message += " ";
+            message += answer->record.RSIG->signature;
+
+            break;
+
         default:
             break;
     }
