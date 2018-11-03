@@ -107,6 +107,17 @@ std::string parse_stats(rr_answer* answer) {
             message += answer->record.TXT->text;
             break;
 
+        case DNS_TYPE_DNSKEY:
+            message += "DNSKEY";
+            message += " ";
+            message += std::to_string(answer->record.DNSKEY->flags);
+            message += " ";
+            message += std::to_string(answer->record.DNSKEY->protocol);
+            message += " ";
+            message += std::to_string(answer->record.DNSKEY->algorithm);
+            message += " ";
+            message += answer->record.DNSKEY->public_key;
+
         default:
             break;
     }

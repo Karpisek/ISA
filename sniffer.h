@@ -24,12 +24,14 @@
 #include <arpa/inet.h>
 #include <string>
 #include <sstream>
+#include <iomanip>
 
 #include "error.h"
 #include "shared.h"
 #include "string.h"
 #include "records.h"
 #include "user_signal.h"
+#include "base64.h"
 
 typedef struct _rr_question rr_question;
 typedef struct _sniff_handler sniff_handler;
@@ -371,7 +373,7 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header);
 rr_question* get_query_record(const b8 **packet, raw_dns_header *header);
 rr_answer* get_answers_record(const b8 **packet, raw_dns_header *header);
 
-std::string get_name(const b8 **packet, raw_dns_header *header, int *length);
+int get_name(const b8 **packet, raw_dns_header *header, std::string *length);
 
 /* records parsers */
 rr_data get_a_record(const b8 *packet);
@@ -382,7 +384,7 @@ rr_data get_ns_record(const b8 *packet, raw_dns_header *header);
 rr_data get_soa_record(const b8 *packet, raw_dns_header *header);
 rr_data get_txt_record(const b8 *packet);
 rr_data get_dnskey_record(const b8 *packet, const rr_answer *answer);
-rr_data get_rsig_record(const b8 *packet, const rr_answer *answer);
+rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header);
 
 #endif //ISA_SNIFFER_H
 

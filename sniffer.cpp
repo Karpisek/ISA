@@ -281,7 +281,7 @@ rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
 
     question = new rr_question;
 
-    question->qname = get_name(packet, header);
+    get_name(packet, header, &question->qname);
 
     question->type = htons(*(b16 *) *packet);
     *packet += sizeof(b16);
@@ -306,7 +306,7 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
      */
     const b8* packet_copy = (b8 *) *packet;
 
-    answer->qname = get_name(&packet_copy, header);
+    get_name(&packet_copy, header, &answer->qname);
     *packet += RESOURCE_RECORD_NAME_OFFSET;
 
     answer->type = htons(*(b16 *) *packet);
@@ -357,6 +357,10 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     answer->record = get_dnskey_record(*packet, answer);
                     break;
 
+                case DNS_TYPE_RSIG:
+                    answer->record = get_rsig_record(*packet, answer, header);
+                    break;
+
                 default:
                     return nullptr;
 
@@ -376,7 +380,7 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
 
 int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
 
-    std::string name;
+    int length = 0;
 
     if((ntohs(*(b16 *) *packet) & 0b1100000000000000) == 0b1100000000000000) {
         int offset = ntohs(*(b16 *) *packet) & 0b0011111111111111;
@@ -384,27 +388,29 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
 
         const b8 *name_start = (const b8 *) header + offset;
 
-        return name + get_name(&name_start, header, );
+        get_name(&name_start, header, output);
+
+        return length;
     }
 
     int next_label_size = **packet;
-    *packet += sizeof(b8);
+    (*packet)++;
+    length++;
 
     if(next_label_size == 0) {
-
-        return "";
+        return 0;
     }
-
 
     /* add characters to output string in range of defined label */
     for(int i = 0; i < next_label_size; i++) {
-        name += **packet;
+        *output += **packet;
         (*packet)++;
+        length++;
     }
 
-    name += '.';
+    *output += '.';
 
-    return name + get_name(packet, header);
+    return length + get_name(packet, header, output);
 }
 
 // TODO: free mem !!!
@@ -443,7 +449,7 @@ rr_data get_cname_record(const b8 *packet, raw_dns_header *header) {
 
     record = new cname_record;
 
-    record->cname = get_name(&packet, header);
+    get_name(&packet, header, &record->cname);
 
     data.CNAME = record;
 
@@ -460,7 +466,7 @@ rr_data get_mx_record(const b8 *packet, raw_dns_header *header) {
     record->preference = ntohs( *(b16 *) packet);
     packet += sizeof(b16);
 
-    record->exchange = get_name(&packet, header);
+    get_name(&packet, header, &record->exchange);
 
     data.MX = record;
 
@@ -474,7 +480,7 @@ rr_data get_ns_record(const b8 *packet, raw_dns_header *header) {
 
     record = new ns_record;
 
-    record->nsname = get_name(&packet, header);
+    get_name(&packet, header, &record->nsname);
 
     data.NS = record;
 
@@ -488,8 +494,8 @@ rr_data get_soa_record(const b8 *packet, raw_dns_header *header) {
 
     record = new soa_record;
 
-    record->mnname = get_name(&packet, header);
-    record->rname = get_name(&packet, header);
+    get_name(&packet, header, &record->mnname);
+    get_name(&packet, header, &record->rname);
 
     record->serial = ntohl( *(b32 *) packet);
     packet += sizeof(b32);
@@ -540,19 +546,13 @@ rr_data get_dnskey_record(const b8 *packet, const rr_answer *answer) {
     record->flags = ntohs( *(b16 *) packet);
     packet += sizeof(b16);
 
-    record->protocol = ntohs(*packet);
+    record->protocol = *packet;
     packet++;
 
-    record->algorithm = ntohs(*packet);
+    record->algorithm = *packet;
     packet++;
 
-    std::stringstream stream;
-    for(int i = 0; i < DNSKEY_HASH_LEN(answer->len); i++) {
-        stream << std::hex << *packet;
-        packet++;
-    }
-
-    record->public_key = stream.str();
+    record->public_key = base64_encode(packet, (unsigned int) DNSKEY_HASH_LEN(answer->len));
 
     data.DNSKEY = record;
 
@@ -568,10 +568,10 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
     record->type = ntohs( *(b16 *) packet);
     packet += sizeof(b16);
 
-    record->algorithm = ntohs(*packet);
+    record->algorithm = *packet;
     packet++;
 
-    record->labels = ntohs(*packet);
+    record->labels = *packet;
     packet++;
 
     record->ttl = ntohl(* (b32 *)packet);
@@ -586,7 +586,7 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
     record->key_tag = ntohs(* (b16 *) packet);
     packet += sizeof(b16);
 
-    record->signers_name = get_name(&packet, header);
+    int length = get_name(&packet, header, &record->signers_name);
 
 }
 

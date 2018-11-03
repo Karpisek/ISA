@@ -242,6 +242,7 @@ struct _dnskey_record {
  *
  *
  */
+#define DNS_TYPE_RSIG 46
 
 struct _rsig_record {
     int type;
