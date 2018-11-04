@@ -279,7 +279,7 @@ struct _nsec_record {
 
 /*
  *  DS RDATA
- *  1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
+ *                      1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
  *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |           Key Tag             |  Algorithm    |  Digest Type  |
@@ -291,11 +291,13 @@ struct _nsec_record {
  *
  */
 #define DNS_TYPE_DS 43
+#define DNS_DIGEST_LEN(len)     (len - 4)
 
 struct _ds_record {
     int key_tag;
     int algorithm;
     int digest_type;
+    std::string digest;
 };
 
 

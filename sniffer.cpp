@@ -621,7 +621,30 @@ rr_data get_nsec_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
 
 rr_data get_ds_record(const b8 *packet, const rr_answer *answer) {
     rr_data data;
-    nsec_record *record;
+    ds_record *record;
+
+    record = new ds_record;
+
+    record->key_tag = ntohs(* (b16 *) packet);
+    packet += sizeof(b16);
+
+    record->algorithm = *packet;
+    packet++;
+
+    record->digest_type = *packet;
+    packet++;
+
+    std::stringstream stream;
+    for(int i = 0; i < DNS_DIGEST_LEN(answer->len); i++) {
+        stream << std::setfill('0') << std::setw(2) << std::hex << (int) *packet;
+        packet++;
+    }
+
+    record->digest = stream.str();
+
+    data.DS = record;
+
+    return data;
 }
 
 

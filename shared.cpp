@@ -181,6 +181,14 @@ std::string parse_stats(rr_answer* answer) {
 
         case DNS_TYPE_DS:
             message += "DS";
+            message += " ";
+            message += std::to_string(answer->record.DS->key_tag);
+            message += " ";
+            message += std::to_string(answer->record.DS->algorithm);
+            message += " ";
+            message += std::to_string(answer->record.DS->digest_type);
+            message += " ";
+            message += answer->record.DS->digest;
             break;
 
         case DNS_TYPE_NSEC:
