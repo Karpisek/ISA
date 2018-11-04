@@ -251,8 +251,8 @@ struct _rsig_record {
     int algorithm;
     int labels;
     int ttl;
-    int expiration;
-    int inception;
+    unsigned int expiration;
+    unsigned int inception;
     int key_tag;
     std::string signers_name;
     std::string signature;

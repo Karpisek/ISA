@@ -78,6 +78,8 @@ int sniff(sniff_handler *handler) {
 }
 
 void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *packet) {
+
+    print_statistics(1);
     static int count = 0;
     count++;
 
@@ -407,7 +409,7 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
     length++;
 
     if(next_label_size == 0) {
-        return 0;
+        return length;
     }
 
     /* add characters to output string in range of defined label */
@@ -586,10 +588,10 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
     record->ttl = ntohl(* (b32 *)packet);
     packet += sizeof(b32);
 
-    record->expiration = ntohl(* (b32 *)packet);
+    record->expiration =  ntohl(* (b32 *)packet);
     packet += sizeof(b32);
 
-    record->inception = ntohl(* (b32 *) packet);
+    record->inception =  ntohl(* (b32 *) packet);
     packet += sizeof(b32);
 
     record->key_tag = ntohs(* (b16 *) packet);
