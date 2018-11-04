@@ -179,6 +179,18 @@ std::string parse_stats(rr_answer* answer) {
             message += answer->record.DNSKEY->public_key;
             break;
 
+        case DNS_TYPE_DS:
+            message += "DS";
+            break;
+
+        case DNS_TYPE_NSEC:
+            message += "NSEC";
+            message += " ";
+            message += answer->record.NSEC->next_domain_name;
+            message += " ";
+            message += answer->record.NSEC->bit_maps;
+            break;
+
         case DNS_TYPE_RSIG:
             message += "RSIG";
             message += " ";
@@ -213,6 +225,19 @@ std::string parse_stats(rr_answer* answer) {
 
                 case DNS_TYPE_DNSKEY:
                     message += "DNSKEY";
+                    break;
+
+                case DNS_TYPE_RSIG:
+                    message += "RSIG";
+                    break;
+
+                case DNS_TYPE_DS:
+                    message += "DS";
+                    break;
+
+                case DNS_TYPE_NSEC:
+                    message += "NSEC";
+                    break;
 
                 default:
                     break;

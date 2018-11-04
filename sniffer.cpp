@@ -363,6 +363,14 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     answer->record = get_rsig_record(*packet, answer, header);
                     break;
 
+                case DNS_TYPE_NSEC:
+                    answer->record = get_nsec_record(*packet, answer, header);
+                    break;
+
+                case DNS_TYPE_DS:
+                    answer->record = get_ds_record(*packet, answer);
+                    break;
+
                 default:
                     return nullptr;
 
@@ -371,7 +379,6 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
 
         default:
             return nullptr;
-            //raise(128, "unsupported DNS rr_record CLASS");
     }
 
     //jump over data
@@ -595,6 +602,26 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
     data.RSIG = record;
 
     return data;
+}
+
+rr_data get_nsec_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header) {
+    rr_data data;
+    nsec_record *record;
+
+    record = new nsec_record;
+
+    int next_domain_len = get_name(&packet, header, &record->next_domain_name);
+
+    record->bit_maps = base64_encode(packet, (unsigned int) DS_HASH_LEN(answer->len, next_domain_len));
+
+    data.NSEC = record;
+
+    return data;
+}
+
+rr_data get_ds_record(const b8 *packet, const rr_answer *answer) {
+    rr_data data;
+    nsec_record *record;
 }
 
 

@@ -385,6 +385,8 @@ rr_data get_soa_record(const b8 *packet, raw_dns_header *header);
 rr_data get_txt_record(const b8 *packet);
 rr_data get_dnskey_record(const b8 *packet, const rr_answer *answer);
 rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header);
+rr_data get_ds_record(const b8 *packet, const rr_answer *answer);
+rr_data get_nsec_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header);
 
 #endif //ISA_SNIFFER_H
 

@@ -16,6 +16,8 @@ typedef struct _soa_record soa_record;
 typedef struct _txt_record txt_record;
 typedef struct _dnskey_record dnskey_record;
 typedef struct _rsig_record rsig_record;
+typedef struct _nsec_record nsec_record;
+typedef struct _ds_record ds_record;
 
 typedef union _rr_data rr_data;
 typedef struct _rr_answer rr_answer;
@@ -32,7 +34,6 @@ typedef struct _rr_answer rr_answer;
  *  ADDRESS - 32 bit Internet IPv4 address
  *
  */
-
 #define DNS_TYPE_A      1
 
 struct _a_record{
@@ -257,6 +258,47 @@ struct _rsig_record {
     std::string signature;
 };
 
+/*
+ *  NSEC RDATA
+ *
+ *                       1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  /                      Next Domain Name                         /
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  /                       Type Bit Maps                           /
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
+#define DNS_TYPE_NSEC 47
+#define DS_HASH_LEN(len, domain_len)        (len - domain_len)
+
+struct _nsec_record {
+    std::string next_domain_name;
+    std::string bit_maps;
+};
+
+/*
+ *  DS RDATA
+ *  1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |           Key Tag             |  Algorithm    |  Digest Type  |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  /                                                               /
+ *  /                            Digest                             /
+ *  /                                                               /
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ */
+#define DNS_TYPE_DS 43
+
+struct _ds_record {
+    int key_tag;
+    int algorithm;
+    int digest_type;
+};
+
+
 
 union _rr_data {
     a_record* A;
@@ -268,6 +310,8 @@ union _rr_data {
     txt_record* TXT;
     dnskey_record* DNSKEY;
     rsig_record* RSIG;
+    nsec_record* NSEC;
+    ds_record* DS;
 };
 
 /*
