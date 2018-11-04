@@ -68,10 +68,10 @@ int sniff(sniff_handler *handler) {
     }
 
     if(pcap_loop(session, 0, process_packet, nullptr) == 0) {
-        send_statistics(0);
+        send_statistics();
+        std::cout << global_fragments.size() << std::endl;
     }
 
-    print_statistics(1);
     pcap_close(session);
 
     return 0;
@@ -79,17 +79,21 @@ int sniff(sniff_handler *handler) {
 
 void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *packet) {
 
-    print_statistics(1);
     static int count = 0;
     count++;
 
-    ethernet_protocol* ethernet;
+    std::cout << count << std::endl;
+
+    ethernet_protocol* ethernet = nullptr;
 
     b8 transport_protocol;
 
-    tcp_protocol* tcp;
+    ip4_protocol* ip4 = nullptr;
+    ip6_protocol* ip6 = nullptr;
 
-    dns_protocol* dns;
+    tcp_protocol* tcp = nullptr;
+
+    dns_protocol* dns = nullptr;
 
     /* L2 */
     ethernet = process_ether_header(&packet);
@@ -97,7 +101,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
 
     /* L3 */
     if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
-        ip4_protocol* ip4;
+
         ip4 = process_ip4_header(packet);
 
         transport_protocol = ip4->prt;
@@ -105,7 +109,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
         packet += IP_HEAD_LEN(ip4);
 
     } else if (ntohs (ethernet->type) == ETHER_TYPE_IP6) {
-        ip6_protocol* ip6;
+
         ip6 = process_ip6_header(packet);
 
         transport_protocol = ip6->next;
@@ -124,8 +128,11 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
             break;
 
         case PRT_TCP:
-            tcp = process_tcp_header(packet);
-            packet += TCP_HEAD_LEN(tcp->offset_n);
+            /* if I get false -> tcp is fragmented, process next packet*/
+            if(!process_tcp_header(&packet, tcp, ethernet, ip4, ip6)) {
+                return;
+            }
+
             break;
 
         default:
@@ -203,12 +210,46 @@ udp_protocol* process_upd_header(const b8 *packet) {
     return udp;
 }
 
-tcp_protocol* process_tcp_header(const b8 *packet) {
-    tcp_protocol *tcp;
+bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6) {
 
-    tcp = (tcp_protocol *) packet;
+    tcp = (tcp_protocol *) *packet;
 
-    return tcp;
+    *packet += TCP_HEAD_LEN(tcp->offset_n);
+
+    /* fragmentation */
+    int data_len;
+
+    /* check if ip4 or ip6 & get HEADERS len*/
+    if(ntohs (eth->type) ==  ETHER_TYPE_IP4) {
+        data_len = ntohs( *(b16 *) ip4->len);
+        data_len -= IP_HEAD_LEN(ip4);
+
+    } else {
+        data_len = ntohs(ip6->payload);
+    }
+
+    data_len -= TCP_HEAD_LEN(tcp->offset_n);
+
+    tcp_fragment *fragment = get_tcp_fragment(tcp->ack);
+
+    for (int i = 0; i < data_len; i++) {
+        fragment->packet[fragment->last] = **packet;
+        fragment->last++;
+        (*packet)++;
+    }
+
+    if(!TCP_PUSH_FLAG(tcp->flags)) {
+        return false;
+    }
+
+    /*
+     * if push flag set, let the program work with the assembled fragment
+     * and remove from global fragmented packages
+     */
+    *packet = (b8 *)fragment->packet;
+    remove_tcp_fragment(fragment->id);
+
+    return true;
 }
 
 dns_protocol* process_dns(const b8 *packet, bool tcp_flag) {
@@ -409,6 +450,7 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
     length++;
 
     if(next_label_size == 0) {
+        (*output).pop_back();
         return length;
     }
 
@@ -601,6 +643,7 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
 
     record->signature = base64_encode(packet, (unsigned int) DNSRSIG_HASH_LEN(answer->len, signers_name_length));
 
+    //record->signature = "!!!!";
     data.RSIG = record;
 
     return data;
@@ -613,6 +656,7 @@ rr_data get_nsec_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
     record = new nsec_record;
 
     int next_domain_len = get_name(&packet, header, &record->next_domain_name);
+
 
     record->bit_maps = base64_encode(packet, (unsigned int) DS_HASH_LEN(answer->len, next_domain_len));
 

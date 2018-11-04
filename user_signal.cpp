@@ -24,15 +24,12 @@ void print_statistics(int signum) {
     signal(SIGCHLD, SIG_IGN);
 }
 
-void send_statistics(int signum) {
+void timeout_signal(int signum) {
     int pid;
     pid = fork();
 
     if(pid == 0) {
-        for(auto stat: global_statistics) {
-            syslog_send(generate_syslog_header() + stat->text + " " + std::to_string(stat->count));
-        }
-
+        send_statistics();
         exit(0);
     }
 
@@ -43,46 +40,8 @@ void send_statistics(int signum) {
     alarm(global_sending_timeout);
 }
 
-std::string generate_syslog_header() {
-
-    /* priority value */
-    int facility = FACILITY_LOCAL_0;
-    int severity = SEVERITY_INFORMATIONAL;
-    int priority = facility * 8 + severity;
-    std::string priority_str = "<" + std::to_string(priority) + ">";
-
-    /* version */
-    int version = SYSLOG_VERSION;
-    std::string version_str = std::to_string(version);
-
-    /* timestamp */
-    char timestamp_str[TIME_STR_BUFFER_SIZE];
-    time_t timestamp = time(nullptr);
-    struct tm *local_timestamp = localtime(&timestamp);
-
-    strftime(timestamp_str, TIME_STR_BUFFER_SIZE, "%FT%TZ", local_timestamp);
-
-    /* hostname is global*/
-    char hostname_str[HOSTNAME_STR_BUFFER_SIZE];
-    gethostname(hostname_str, HOSTNAME_STR_BUFFER_SIZE);
-
-    /* app_name is global */
-
-    /* structured data is NILVALUE */
-    std::string structured_data = NIL_VALUE;
-
-    std::string return_string;
-    return_string += priority_str;
-    return_string += version_str;
-    return_string += " ";
-    return_string += timestamp_str;
-    return_string += " ";
-    return_string += hostname_str;
-    return_string += " ";
-    return_string += APP_NAME;
-    return_string += " ";
-    return_string += structured_data;
-    return_string += " ";
-
-    return return_string;
+void send_statistics() {
+    for(auto stat: global_statistics) {
+        syslog_send(generate_syslog_header() + stat->text + " " + std::to_string(stat->count));
+    }
 }

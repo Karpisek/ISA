@@ -7,6 +7,7 @@
 #define PORT "514"
 
 std::vector <statistic *> global_statistics;
+std::vector <tcp_fragment *> global_fragments;
 connection global_syslog_connection;
 unsigned int global_sending_timeout;
 
@@ -37,6 +38,32 @@ void add_to_statistics(rr_answer *new_answer) {
     delete new_answer;
 }
 
+tcp_fragment* get_tcp_fragment(int id) {
+    for(auto frag : global_fragments) {
+        if(frag->id == id) {
+            return frag;
+        }
+    }
+
+    auto new_fragment = new tcp_fragment;
+    new_fragment->id = id;
+    global_fragments.push_back(new_fragment);
+
+    return new_fragment;
+}
+
+void remove_tcp_fragment(int id) {
+    int index = 0;
+    for(auto frag : global_fragments) {
+        if(frag->id == id) {
+            break;
+        }
+        index++;
+    }
+
+    global_fragments.erase(global_fragments.begin() + index);
+}
+
 int init_sender(const char *addr_str) {
 
     if(global_syslog_connection.enstablished) {
@@ -59,25 +86,18 @@ int init_sender(const char *addr_str) {
         raise(22132, "Host not found");
     }
 
-    /* connect socket */
+    /* create socket */
     socket_fd = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
     if(socket_fd < 0) {
         raise(55, "Socket failed");
     }
 
-    succ = connect(socket_fd, info->ai_addr, info->ai_addrlen);
-    if(succ < 0) {
-        raise(66, "Connect failed");
-    }
-
-    printf("Successfully bound to port %s\n", PORT);
-
-    global_syslog_connection = {true, socket_fd};
+    global_syslog_connection = {true, socket_fd, info};
 
     return 0;
 }
 
-int close_connection() {
+int close_socket() {
 
     if(!global_syslog_connection.enstablished) {
         return 1;
@@ -98,8 +118,10 @@ int syslog_send(std::string data_to_send) {
         return 1;
     }
 
-    std::cout << data_to_send.c_str() << std::endl;
-    send(global_syslog_connection.connection, data_to_send.c_str(), data_to_send.size(), 0);  // send data to the server
+    std::cout << "<smazat !!!>" << data_to_send.size() << std::endl;
+
+    sendto(global_syslog_connection.connection, data_to_send.c_str(), data_to_send.size(), 0, global_syslog_connection.info->ai_addr, global_syslog_connection.info->ai_addrlen);
+
     return 0;
 }
 
@@ -276,4 +298,56 @@ std::string parse_stats(rr_answer* answer) {
 
     return message;
 }
+
+std::string generate_syslog_header() {
+
+    /* priority value */
+    int facility = FACILITY_LOCAL_0;
+    int severity = SEVERITY_INFORMATIONAL;
+    int priority = facility * 8 + severity;
+    std::string priority_str = "<" + std::to_string(priority) + ">";
+
+    /* version */
+    int version = SYSLOG_VERSION;
+    std::string version_str = std::to_string(version);
+
+    /* timestamp */
+    struct timeval tv = {};
+    gettimeofday(&tv,NULL);
+
+    long m_sec = lrint(tv.tv_usec/1000.0);
+
+    char timestamp_str[TIME_STR_BUFFER_SIZE];
+    time_t timestamp = time(nullptr);
+    struct tm *local_timestamp = localtime(&timestamp);
+
+    strftime(timestamp_str, TIME_STR_BUFFER_SIZE, "%FT%T", local_timestamp);
+
+
+    /* hostname is global*/
+    char hostname_str[HOSTNAME_STR_BUFFER_SIZE];
+    gethostname(hostname_str, HOSTNAME_STR_BUFFER_SIZE);
+
+    /* app_name is global */
+
+    /* structured data is NILVALUE */
+    std::string structured_data = NIL_VALUE;
+
+    std::string return_string;
+    return_string += priority_str;
+    return_string += version_str;
+    return_string += " ";
+    return_string += timestamp_str;
+    return_string += ":" + std::to_string(m_sec) + "Z";
+    return_string += " ";
+    return_string += hostname_str;
+    return_string += " ";
+    return_string += APP_NAME;
+    return_string += " ";
+    return_string += structured_data;
+    return_string += " ";
+
+    return return_string;
+}
+
 

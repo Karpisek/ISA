@@ -220,7 +220,11 @@ typedef struct udp_protocol{
  *  WIN_SIZE - window size
  */
 
-#define TCP_HEAD_LEN(offset_n)    ((offset_n >> 4) * 4)
+#define TCP_HEAD_LEN(offset_n)      ((offset_n >> 4) * 4)
+#define TCP_PUSH_FLAG(flags)        ((flags >> 3) & 0b1)
+#define TCP_ACK_FLAG(flags)         ((flags >> 4) & 0b1)
+#define TCP_SYN_FLAG(flags)         ((flags >> 1) & 0b1)
+#define TCP_DATA_LEN
 
 typedef struct tcp_protocol{
     b16 src;
@@ -363,7 +367,7 @@ ip6_protocol* process_ip6_header(const b8 *packet);
 
 /* L4 header processing */
 udp_protocol* process_upd_header(const b8 *packet);
-tcp_protocol* process_tcp_header(const b8 *packet);
+bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6);
 
 /* L5 header processing */
 dns_protocol* process_dns(const b8 *packet, bool tcp_flag);

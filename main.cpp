@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     signal(SIGUSR1, print_statistics);
 
     /* register alarm for sending to server */
-    signal(SIGALRM, send_statistics);
+    signal(SIGALRM, timeout_signal);
 
     sniff_handler *handler = nullptr;
 
