@@ -699,7 +699,7 @@ int parse_bitmap_field(const b8 **packet, std::string *output) {
 
     stringCounts[1] = "A ";
     stringCounts[2] = "NS ";
-    stringCounts[5] = "CNAME";
+    stringCounts[5] = "CNAME ";
     stringCounts[6] = "SOA ";
     stringCounts[15] = "MX ";
     stringCounts[16] = "TXT ";
