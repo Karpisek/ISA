@@ -14,10 +14,10 @@ int main(int argc, char **argv) {
 
     sniff_handler *handler = nullptr;
 
-    argument interface = {false, 0};
-    argument resource = {false, 0};
-    argument timeout = {false, 0};
-    argument server = {false, 0};
+    argument interface = {false, {}};
+    argument resource = {false, {}};
+    argument timeout = {false, {}};
+    argument server = {false, {}};
 
     /* parses given arguments and checks for collisions */
     parse_input(argc, argv, &interface, &resource, &server, &timeout);

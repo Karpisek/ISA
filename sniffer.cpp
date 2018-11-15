@@ -693,17 +693,17 @@ int parse_bitmap_field(const b8 **packet, std::string *output) {
 
     std::map<int, std::string> stringCounts;
 
-    stringCounts[1] = "A";
-    stringCounts[2] = "NS";
+    stringCounts[1] = "A ";
+    stringCounts[2] = "NS ";
     stringCounts[5] = "CNAME";
-    stringCounts[6] = "SOA";
-    stringCounts[15] = "MX";
-    stringCounts[16] = "TXT";
-    stringCounts[28] = "AAAA";
-    stringCounts[43] = "DS";
-    stringCounts[46] = "RRSIG";
-    stringCounts[47] = "NSEC";
-    stringCounts[48] = "DNSKEY";
+    stringCounts[6] = "SOA ";
+    stringCounts[15] = "MX ";
+    stringCounts[16] = "TXT ";
+    stringCounts[28] = "AAAA ";
+    stringCounts[43] = "DS ";
+    stringCounts[46] = "RRSIG ";
+    stringCounts[47] = "NSEC ";
+    stringCounts[48] = "DNSKEY ";
 
     int window = **packet;
     (*packet)++;
@@ -717,7 +717,6 @@ int parse_bitmap_field(const b8 **packet, std::string *output) {
         for(int n = 0; n < 8; n++) {
             if(**packet & (mask >> n)) {
                 *output += stringCounts[(i*8) + n];
-                *output += " ";
             }
         }
 
