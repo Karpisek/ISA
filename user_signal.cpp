@@ -6,6 +6,7 @@
 #include "user_signal.h"
 
 void print_statistics(int signum) {
+    (void) signum; //in this project unused parameter
 
     int pid;
     pid = fork();
@@ -25,6 +26,8 @@ void print_statistics(int signum) {
 }
 
 void timeout_signal(int signum) {
+    (void) signum;  //in this project unused parameter
+
     int pid;
     pid = fork();
 

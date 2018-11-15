@@ -77,6 +77,8 @@ int sniff(sniff_handler *handler) {
 }
 
 void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *packet) {
+    (void) args;
+    (void) header;
 
     ethernet_protocol* ethernet = nullptr;
 
@@ -211,6 +213,8 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
     *packet += TCP_HEAD_LEN(tcp->offset_n);
 
     int seq = ntohl(tcp->seq);
+    (void)seq;  //in this project its unused
+
     /* fragmentation */
     int data_len = 0;
 
@@ -429,8 +433,8 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
 
     int length = 0;
 
-    if((ntohs(*(b16 *) *packet) & 0b1100000000000000) == 0b1100000000000000) {
-        int offset = ntohs(*(b16 *) *packet) & 0b0011111111111111;
+    if((ntohs(*(b16 *) *packet) & 0xC000) == 0xC000) {
+        int offset = ntohs(*(b16 *) *packet) & 0x3FFF;
         *packet += sizeof(b16);
 
         const b8 *name_start = (const b8 *) header + offset;
