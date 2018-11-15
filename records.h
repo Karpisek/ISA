@@ -251,8 +251,8 @@ struct _rsig_record {
     int algorithm;
     int labels;
     int ttl;
-    unsigned int expiration;
-    unsigned int inception;
+    std::string expiration;
+    std::string inception;
     int key_tag;
     std::string signers_name;
     std::string signature;
@@ -270,7 +270,7 @@ struct _rsig_record {
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 #define DNS_TYPE_NSEC 47
-#define DS_HASH_LEN(len, domain_len)        (len - domain_len)
+#define NSEC_BITMAP_LEN(len, domain_len)        (len - domain_len)
 
 struct _nsec_record {
     std::string next_domain_name;
@@ -291,7 +291,7 @@ struct _nsec_record {
  *
  */
 #define DNS_TYPE_DS 43
-#define DNS_DIGEST_LEN(len)     (len - 4)
+#define DS_DIGEST_LEN(len)     (len - 4)
 
 struct _ds_record {
     int key_tag;

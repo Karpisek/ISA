@@ -26,7 +26,7 @@
 
 #define TIME_STR_BUFFER_SIZE 80
 #define HOSTNAME_STR_BUFFER_SIZE 80
-#define NIL_VALUE "-"
+#define NIL_VALUE "- - -"
 #define APP_NAME "dns-export"
 
 typedef struct _connection {

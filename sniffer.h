@@ -25,6 +25,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <map>
 
 #include "error.h"
 #include "shared.h"
@@ -378,6 +379,7 @@ rr_question* get_query_record(const b8 **packet, raw_dns_header *header);
 rr_answer* get_answers_record(const b8 **packet, raw_dns_header *header);
 
 int get_name(const b8 **packet, raw_dns_header *header, std::string *length);
+int parse_bitmap_field(const b8 **packet, std::string *output);
 
 /* records parsers */
 rr_data get_a_record(const b8 *packet);
