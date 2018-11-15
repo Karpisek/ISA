@@ -69,7 +69,6 @@ int sniff(sniff_handler *handler) {
 
     if(pcap_loop(session, 0, process_packet, nullptr) == 0) {
         send_statistics();
-        std::cout << global_fragments.size() << std::endl;
     }
 
     pcap_close(session);
@@ -78,11 +77,6 @@ int sniff(sniff_handler *handler) {
 }
 
 void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *packet) {
-
-    static int count = 0;
-    count++;
-
-    std::cout << count << std::endl;
 
     ethernet_protocol* ethernet = nullptr;
 
@@ -216,8 +210,9 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
 
     *packet += TCP_HEAD_LEN(tcp->offset_n);
 
+    int seq = ntohl(tcp->seq);
     /* fragmentation */
-    int data_len;
+    int data_len = 0;
 
     /* check if ip4 or ip6 & get HEADERS len*/
     if(ntohs (eth->type) ==  ETHER_TYPE_IP4) {
@@ -615,6 +610,9 @@ rr_data get_dnskey_record(const b8 *packet, const rr_answer *answer) {
 rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header) {
     rr_data data;
     rsig_record *record;
+    time_t t;
+    struct tm* lt;
+    char time_str[15];
 
     record = new rsig_record;
 
@@ -630,11 +628,33 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
     record->ttl = ntohl(* (b32 *)packet);
     packet += sizeof(b32);
 
-    record->expiration =  ntohl(* (b32 *)packet);
+    t =  ntohl(* (b32 *)packet);
     packet += sizeof(b32);
 
-    record->inception =  ntohl(* (b32 *) packet);
+    lt = gmtime(&t);
+    sprintf(time_str, "%04d%02d%02d%02d%02d%02d",
+            lt->tm_year + 1900,
+            lt->tm_mon + 1,
+            lt->tm_mday,
+            lt->tm_hour,
+            lt->tm_min,
+            lt->tm_sec);
+
+    record->expiration = time_str;
+
+    t = ntohl(* (b32 *) packet);
     packet += sizeof(b32);
+
+    lt = gmtime(&t);
+    sprintf(time_str, "%04d%02d%02d%02d%02d%02d",
+            lt->tm_year + 1900,
+            lt->tm_mon + 1,
+            lt->tm_mday,
+            lt->tm_hour,
+            lt->tm_min,
+            lt->tm_sec);
+
+    record->inception = time_str;
 
     record->key_tag = ntohs(* (b16 *) packet);
     packet += sizeof(b16);
@@ -643,7 +663,6 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
 
     record->signature = base64_encode(packet, (unsigned int) DNSRSIG_HASH_LEN(answer->len, signers_name_length));
 
-    //record->signature = "!!!!";
     data.RSIG = record;
 
     return data;
@@ -657,12 +676,59 @@ rr_data get_nsec_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
 
     int next_domain_len = get_name(&packet, header, &record->next_domain_name);
 
+    int bytes_to_end = NSEC_BITMAP_LEN(answer->len, next_domain_len);
 
-    record->bit_maps = base64_encode(packet, (unsigned int) DS_HASH_LEN(answer->len, next_domain_len));
+    while(bytes_to_end > 0) {
+        bytes_to_end -= parse_bitmap_field(&packet, &record->bit_maps);
+    }
+
+    //record->bit_maps = base64_encode(packet, (unsigned int) DS_BITMAP_LEN(answer->len, next_domain_len));
 
     data.NSEC = record;
 
     return data;
+}
+
+int parse_bitmap_field(const b8 **packet, std::string *output) {
+
+    std::map<int, std::string> stringCounts;
+
+    stringCounts[1] = "A";
+    stringCounts[2] = "NS";
+    stringCounts[5] = "CNAME";
+    stringCounts[6] = "SOA";
+    stringCounts[15] = "MX";
+    stringCounts[16] = "TXT";
+    stringCounts[28] = "AAAA";
+    stringCounts[43] = "DS";
+    stringCounts[46] = "RRSIG";
+    stringCounts[47] = "NSEC";
+    stringCounts[48] = "DNSKEY";
+
+    int window = **packet;
+    (*packet)++;
+
+    int bitmap_len = **packet;
+    (*packet)++;
+
+    int mask = 1 << 7;
+    for(int i = 0; i < bitmap_len; i++) {
+
+        for(int n = 0; n < 8; n++) {
+            if(**packet & (mask >> n)) {
+                *output += stringCounts[(i*8) + n];
+                *output += " ";
+            }
+        }
+
+        (*packet)++;
+    }
+
+    if (output->length() > 0) {
+        output->pop_back();
+    }
+
+    return bitmap_len + 2;
 }
 
 rr_data get_ds_record(const b8 *packet, const rr_answer *answer) {
@@ -681,7 +747,7 @@ rr_data get_ds_record(const b8 *packet, const rr_answer *answer) {
     packet++;
 
     std::stringstream stream;
-    for(int i = 0; i < DNS_DIGEST_LEN(answer->len); i++) {
+    for(int i = 0; i < DS_DIGEST_LEN(answer->len); i++) {
         stream << std::setfill('0') << std::setw(2) << std::hex << (int) *packet;
         packet++;
     }

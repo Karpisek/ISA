@@ -118,8 +118,6 @@ int syslog_send(std::string data_to_send) {
         return 1;
     }
 
-    std::cout << "<smazat !!!>" << data_to_send.size() << std::endl;
-
     sendto(global_syslog_connection.connection, data_to_send.c_str(), data_to_send.size(), 0, global_syslog_connection.info->ai_addr, global_syslog_connection.info->ai_addrlen);
 
     return 0;
@@ -280,9 +278,9 @@ std::string parse_stats(rr_answer* answer) {
             message += " ";
             message += std::to_string(answer->record.RSIG->ttl);
             message += " ";
-            message += std::to_string(answer->record.RSIG->expiration);
+            message += answer->record.RSIG->expiration;
             message += " ";
-            message += std::to_string(answer->record.RSIG->inception);
+            message += answer->record.RSIG->inception;
             message += " ";
             message += std::to_string(answer->record.RSIG->key_tag);
             message += " ";
@@ -313,22 +311,26 @@ std::string generate_syslog_header() {
 
     /* timestamp */
     struct timeval tv = {};
-    gettimeofday(&tv,NULL);
+    gettimeofday(&tv, nullptr);
 
     long m_sec = lrint(tv.tv_usec/1000.0);
 
     char timestamp_str[TIME_STR_BUFFER_SIZE];
-    time_t timestamp = time(nullptr);
-    struct tm *local_timestamp = localtime(&timestamp);
+    time_t t = time(nullptr);
 
-    strftime(timestamp_str, TIME_STR_BUFFER_SIZE, "%FT%T", local_timestamp);
-
+    struct tm* lt = gmtime(&t);
+    sprintf(timestamp_str, "%04d-%02d-%02dT%02d:%02d:%02d:%03ldZ",
+            lt->tm_year + 1900,
+            lt->tm_mon + 1,
+            lt->tm_mday,
+            lt->tm_hour,
+            lt->tm_min,
+            lt->tm_sec,
+            m_sec);
 
     /* hostname is global*/
     char hostname_str[HOSTNAME_STR_BUFFER_SIZE];
     gethostname(hostname_str, HOSTNAME_STR_BUFFER_SIZE);
-
-    /* app_name is global */
 
     /* structured data is NILVALUE */
     std::string structured_data = NIL_VALUE;
@@ -338,7 +340,6 @@ std::string generate_syslog_header() {
     return_string += version_str;
     return_string += " ";
     return_string += timestamp_str;
-    return_string += ":" + std::to_string(m_sec) + "Z";
     return_string += " ";
     return_string += hostname_str;
     return_string += " ";
