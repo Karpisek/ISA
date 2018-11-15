@@ -1,5 +1,5 @@
 CC=g++
-FLAGS=-std=c++14 -Wall -Wextra -pedantic -lpcap
+FLAGS=-std=c++11 -Wall -Wextra -pedantic -lpcap
 PROJ_NAME=dns-export
 
 all:
