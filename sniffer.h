@@ -105,7 +105,7 @@ typedef struct ethernet_protocol {
  * */
 
 #define IP4_ADDR_LEN 4
-#define IP_HEAD_LEN(ip)          ((((ip)->ver_ihl) & 0b00001111) * 4) /* extract ip header length from IHL */
+#define IP_HEAD_LEN(ip)          ((((ip)->ver_ihl) & 0x0F) * 4) /* extract ip header length from IHL */
 #define IP_VERSION(ip)           (((ip)->ver_ihl) >> 4)             /* extract ip version length from IHL */
 #define PRT_UDP 17  /* UDP protocol decimal code for PRT according to RFC 1700 */
 #define PRT_TCP 6   /* TCP protocol decimal code for PRT according to RFC 1700 */

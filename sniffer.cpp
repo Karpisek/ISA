@@ -233,7 +233,7 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
         (*packet)++;
     }
 
-    if(!TCP_PUSH_FLAG(tcp->flags)) {
+    if(!TCP_PUSH_FLAG(tcp->flags)){
         return false;
     }
 
