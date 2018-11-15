@@ -107,7 +107,7 @@ int close_socket() {
         printf("ERROR closing socket");
     }
 
-    global_syslog_connection = {false, -1, {}};
+    global_syslog_connection.enstablished = false;
 
     return 0;
 }
