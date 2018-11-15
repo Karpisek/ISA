@@ -712,6 +712,8 @@ int parse_bitmap_field(const b8 **packet, std::string *output) {
     int window = **packet;
     (*packet)++;
 
+    (void)window;   //window not supported "sorry"
+
     int bitmap_len = **packet;
     (*packet)++;
 
