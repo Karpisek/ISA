@@ -72,7 +72,7 @@ int init_sender(const char *addr_str) {
 
     int socket_fd, succ;
 
-    struct addrinfo hint = {};
+    struct addrinfo hint;
     struct addrinfo *info;
 
     memset(&hint, 0, sizeof hint);  // make sure the struct is empty
