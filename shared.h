@@ -73,10 +73,6 @@ struct _parameters {
     argument fragmentation;
 };
 
-
-
-
-
 extern unsigned int global_sending_timeout;
 extern std::vector <statistic *> global_statistics;
 extern std::vector <tcp_fragment *> global_fragments;
@@ -85,7 +81,6 @@ extern parameters global_parameters;
 
 /* statistic procedures */
 void add_to_statistics(rr_answer *record);
-tcp_fragment* get_tcp_fragment(tcp_protocol *tcp);
 void remove_tcp_fragment(int id);
 
 /* sender procedures */

@@ -400,5 +400,7 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
 rr_data get_ds_record(const b8 *packet, const rr_answer *answer);
 rr_data get_nsec_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header);
 
+tcp_fragment* get_tcp_fragment(tcp_protocol *tcp);
+
 #endif //ISA_SNIFFER_H
 

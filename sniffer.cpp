@@ -255,7 +255,7 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
     tcp_fragment *fragment = get_tcp_fragment(tcp);
 
     for (int i = 0; i < data_len; i++) {
-        fragment->packet[seq] = **packet;
+        fragment->packet[0] = **packet;
         (*packet)++;
     }
 
@@ -271,6 +271,23 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
     remove_tcp_fragment(fragment->id);
 
     return true;
+}
+
+tcp_fragment* get_tcp_fragment(tcp_protocol *tcp) {
+
+
+    for(auto frag : global_fragments) {
+        if(frag->id == tcp->ack) {
+            return frag;
+        }
+    }
+
+    auto new_fragment = new tcp_fragment;
+    new_fragment->id = tcp->ack;
+    //new_fragment->initial_seq = tcp->se
+    global_fragments.push_back(new_fragment);
+
+    return new_fragment;
 }
 
 dns_protocol* process_dns(const b8 *packet, bool tcp_flag) {
@@ -764,7 +781,7 @@ rr_data get_ds_record(const b8 *packet, const rr_answer *answer) {
 
     record = new ds_record;
 
-    record->key_tag = ntohs(* (b16 *) packet);
+    record->key_tag = ntohs(*(b16 *) packet);
     packet += sizeof(b16);
 
     record->algorithm = *packet;
@@ -774,7 +791,7 @@ rr_data get_ds_record(const b8 *packet, const rr_answer *answer) {
     packet++;
 
     std::stringstream stream;
-    for(int i = 0; i < DS_DIGEST_LEN(answer->len); i++) {
+    for (int i = 0; i < DS_DIGEST_LEN(answer->len); i++) {
         stream << std::setfill('0') << std::setw(2) << std::hex << (int) *packet;
         packet++;
     }
