@@ -311,7 +311,7 @@ std::string generate_syslog_header() {
     std::string version_str = std::to_string(version);
 
     /* timestamp */
-    struct timeval tv = {};
+    struct timeval tv{};
     gettimeofday(&tv, nullptr);
 
     long m_sec = lrint(tv.tv_usec/1000.0);
