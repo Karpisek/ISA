@@ -43,7 +43,7 @@ sniff_handler *init_file(char *filename) {
 
 int sniff(sniff_handler *handler) {
 
-    struct bpf_program filter_exp{};		/* The compiled filter expression */
+    struct bpf_program filter_exp;		/* The compiled filter expression */
 
     char *dev = handler->dev;
     pcap_t *session = handler->session;
