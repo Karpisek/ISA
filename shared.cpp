@@ -48,6 +48,11 @@ tcp_fragment* get_tcp_fragment(int id) {
 
     auto new_fragment = new tcp_fragment;
     new_fragment->id = id;
+
+    for(int i = 0; i < 65535; i++) {
+        new_fragment->packet[i] = '\0';
+    }
+
     global_fragments.push_back(new_fragment);
 
     return new_fragment;
