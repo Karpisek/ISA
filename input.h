@@ -16,20 +16,11 @@
 #include <unistd.h>
 
 #include "error.h"
+#include "shared.h"
 
-union arg_val {
-    int i;
-    char *str;
-};
+void parse_input(int argc, char **argv);
 
-struct argument {
-    bool defined;
-    arg_val value;
-};
-
-void parse_input(int argc, char **argv, argument *interface, argument *resource, argument *server, argument *timeout);
-
-void debug_print_args(argument interface, argument resource, argument server, argument timeout);
-void check_collisions(argument interface, argument resource, argument server, argument timeout);
+void debug_print_args();
+void check_collisions();
 
 #endif //ISA_INPUT_H

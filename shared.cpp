@@ -8,6 +8,7 @@
 
 std::vector <statistic *> global_statistics;
 std::vector <tcp_fragment *> global_fragments;
+parameters global_parameters;
 connection global_syslog_connection;
 unsigned int global_sending_timeout;
 
