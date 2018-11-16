@@ -54,7 +54,7 @@ void send_statistics() {
 
             if(message.length() + new_message.length() > 1000) {
                 syslog_send(message);
-                message = "";
+                //message = "";
             } else {
                 if(message.length() > 0){
                     message += " ";
