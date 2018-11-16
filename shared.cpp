@@ -3,6 +3,7 @@
 //
 
 #include "shared.h"
+#include "sniffer.h"
 
 #define PORT "514"
 
@@ -39,15 +40,18 @@ void add_to_statistics(rr_answer *new_answer) {
     delete new_answer;
 }
 
-tcp_fragment* get_tcp_fragment(int id) {
+tcp_fragment* get_tcp_fragment(tcp_protocol *tcp) {
+
+
     for(auto frag : global_fragments) {
-        if(frag->id == id) {
+        if(frag->id == tcp->ack) {
             return frag;
         }
     }
 
     auto new_fragment = new tcp_fragment;
-    new_fragment->id = id;
+    new_fragment->id = tcp->ack;
+    //new_fragment->initial_seq = tcp->se
     global_fragments.push_back(new_fragment);
 
     return new_fragment;

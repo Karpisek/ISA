@@ -228,8 +228,8 @@ typedef struct udp_protocol{
 
 #define TCP_HEAD_LEN(offset_n)      ((offset_n >> 4) * 4)
 #define TCP_PUSH_FLAG(flags)        ((flags >> 3) & 0x1)
-#define TCP_ACK_FLAG(flags)         ((flags >> 4) & 0b1)
-#define TCP_SYN_FLAG(flags)         ((flags >> 1) & 0b1)
+#define TCP_ACK_FLAG(flags)         ((flags >> 4) & 0x1)
+#define TCP_SYN_FLAG(flags)         ((flags >> 1) & 0x1)
 #define TCP_DATA_LEN
 
 typedef struct tcp_protocol{

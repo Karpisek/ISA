@@ -238,9 +238,6 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
 
     *packet += TCP_HEAD_LEN(tcp->offset_n);
 
-    int seq = ntohl(tcp->seq);
-    (void)seq;  //in this project its unused
-
     /* fragmentation */
     int data_len = 0;
 
@@ -255,12 +252,10 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
 
     data_len -= TCP_HEAD_LEN(tcp->offset_n);
 
-    tcp_fragment *fragment = get_tcp_fragment(tcp->ack);
+    tcp_fragment *fragment = get_tcp_fragment(tcp);
 
     for (int i = 0; i < data_len; i++) {
-        //std::cout << fragment->last << std::endl;
-        fragment->packet[fragment->last] = **packet;
-        fragment->last++;
+        fragment->packet[seq] = **packet;
         (*packet)++;
     }
 
