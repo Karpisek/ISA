@@ -230,6 +230,7 @@ udp_protocol* process_upd_header(const b8 *packet) {
 
 bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6) {
     if(!global_parameters.fragmentation.defined) {
+        std::cout << "<<<" << std::endl;
         return false;
         // TODO ERROR not supported
     }
