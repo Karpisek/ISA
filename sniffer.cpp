@@ -258,6 +258,7 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
     tcp_fragment *fragment = get_tcp_fragment(tcp->ack);
 
     for (int i = 0; i < data_len; i++) {
+        std::cout << fragment->last << std::endl;
         fragment->packet[fragment->last] = **packet;
         fragment->last++;
         (*packet)++;
