@@ -14,7 +14,7 @@ sniff_handler *init_interface(char *dev) {
 
     handler->dev = dev;
 
-    if(pcap_lookupnet("any", &handler->ip_address, &handler->netmask, error_buffer) == -1) {
+    if(pcap_lookupnet(dev, &handler->ip_address, &handler->netmask, error_buffer) == -1) {
         fprintf(stderr, "Can't get netmask for device %s\n", dev);
     }
 
