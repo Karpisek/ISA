@@ -16,6 +16,7 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <cmath>
+#include <ifaddrs.h>
 
 #include "records.h"
 #include "error.h"
@@ -69,6 +70,7 @@ struct _parameters {
     argument server;
     argument timeout;
     argument concatenate;
+    argument fragmentation;
 };
 
 

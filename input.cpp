@@ -9,7 +9,7 @@ void parse_input(int argc, char **argv) {
     opterr = 0;
     int c;
 
-    while ((c = getopt (argc, argv, "cr:i:s:t:")) != -1) {
+    while ((c = getopt (argc, argv, "fcr:i:s:t:")) != -1) {
         switch (c) {
             case 'r':
                 global_parameters.resource.defined = true;
@@ -33,6 +33,10 @@ void parse_input(int argc, char **argv) {
 
             case 'c':
                 global_parameters.concatenate.defined = true;
+                break;
+
+            case 'f':
+                global_parameters.fragmentation.defined = true;
                 break;
 
             case '?':

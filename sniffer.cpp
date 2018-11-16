@@ -14,7 +14,7 @@ sniff_handler *init_interface(char *dev) {
 
     handler->dev = dev;
 
-    if(pcap_lookupnet(dev, &handler->ip_address, &handler->netmask, error_buffer) == -1) {
+    if(pcap_lookupnet("any", &handler->ip_address, &handler->netmask, error_buffer) == -1) {
         fprintf(stderr, "Can't get netmask for device %s\n", dev);
     }
 
@@ -207,6 +207,9 @@ udp_protocol* process_upd_header(const b8 *packet) {
 }
 
 bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6) {
+    if(!global_parameters.fragmentation.defined) {
+        // TODO ERROR not supported
+    }
 
     tcp = (tcp_protocol *) *packet;
 
