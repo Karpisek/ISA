@@ -57,7 +57,7 @@ void send_statistics() {
                 message = "";
             } else {
                 if(message.length() > 0){
-                    message += "\n";
+                    message += " ";
                 }
 
                 message += new_message;

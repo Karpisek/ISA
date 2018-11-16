@@ -320,7 +320,7 @@ std::string generate_syslog_header() {
     time_t t = time(nullptr);
 
     struct tm* lt = gmtime(&t);
-    sprintf(timestamp_str, "%04d-%02d-%02dT%02d:%02d:%02d:%03ldZ",
+    sprintf(timestamp_str, "%04d-%02d-%02dT%02d:%02d:%02d.%03ldZ",
             lt->tm_year + 1900,
             lt->tm_mon + 1,
             lt->tm_mday,
