@@ -44,7 +44,7 @@ void timeout_signal(int signum) {
 }
 
 void send_statistics() {
-    std::string message;
+    static std::string message;
     std::string new_message;
 
     if(global_parameters.concatenate.defined) {
