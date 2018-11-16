@@ -44,7 +44,7 @@ void timeout_signal(int signum) {
 }
 
 void send_statistics() {
-    static std::string message;
+    std::string message;
     std::string new_message;
 
     if(global_parameters.concatenate.defined) {
@@ -54,7 +54,7 @@ void send_statistics() {
 
             if(message.length() + new_message.length() > 1000) {
                 syslog_send(message);
-                //message = "";
+                message = "";
             } else {
                 if(message.length() > 0){
                     message += " ";
