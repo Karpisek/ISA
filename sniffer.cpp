@@ -49,12 +49,6 @@ int sniff(sniff_handler *handler) {
     pcap_t *session = handler->session;
     b32 netmask = handler->netmask;
 
-    /* make sure we're capturing on an Ethernet device */
-    //if (pcap_datalink(session) != DLT_EN10MB) {
-    //    fprintf(stderr, "%s is not an Ethernet\n", dev);
-    //    exit(EXIT_FAILURE);
-    //}
-
     /* create sniff-filter */
     if(pcap_compile(session, &filter_exp, FILTER_EXPRESSION, 0, netmask) == -1) {
         fprintf(stderr, "Couldn't parse filter %s: %s\n", FILTER_EXPRESSION, pcap_geterr(session));
@@ -67,7 +61,10 @@ int sniff(sniff_handler *handler) {
         return(2);
     }
 
-    if(pcap_loop(session, 0, process_packet, nullptr) == 0) {
+    auto *params = new loop_parameters;
+    params->session = session;
+
+    if(pcap_loop(session, 0, process_packet, (u_char *) params) == 0) {
         send_statistics();
     }
 
@@ -77,7 +74,8 @@ int sniff(sniff_handler *handler) {
 }
 
 void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *packet) {
-    (void) args;
+    pcap *session = ((loop_parameters *) args)->session;
+
     (void) header;
 
     ethernet_protocol* ethernet = nullptr;
@@ -92,8 +90,19 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
     dns_protocol* dns = nullptr;
 
     /* L2 */
-    ethernet = process_ether_header(&packet);
-    packet += ETHERNET_HEADER_LEN;
+    /* make sure we're capturing on an Ethernet device */
+    int datalink_type = pcap_datalink(session);
+
+    if (datalink_type == DLT_EN10MB) {
+        ethernet = process_ether_header(&packet);
+    }
+    else if(datalink_type == DLT_LINUX_SLL) {
+        ethernet = process_linux_ether_header(&packet);
+    }
+    else {
+        return;
+    }
+
 
     /* L3 */
     if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
@@ -153,6 +162,19 @@ ethernet_protocol* process_ether_header(const unsigned char **packet) {
 
     /* typecast ethernet header */
     ethernet = (ethernet_protocol *) *packet;
+
+    *packet += DLT_EN10MB_HEADER_LEN;
+
+    return ethernet;
+}
+
+ethernet_protocol* process_linux_ether_header(const b8 **packet) {
+    auto *ethernet = new ethernet_protocol;   /* Ethernet header */
+
+    /* getting the type of protocol */
+    *packet += 14;
+    ethernet->type = **packet;
+    *packet += 2;
 
     return ethernet;
 }
@@ -405,7 +427,7 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     answer->record = get_dnskey_record(*packet, answer);
                     break;
 
-                case DNS_TYPE_RSIG:
+                case DNS_TYPE_RRSIG:
                     answer->record = get_rsig_record(*packet, answer, header);
                     break;
 

@@ -220,8 +220,8 @@ std::string parse_stats(rr_answer* answer) {
             message += answer->record.NSEC->bit_maps;
             break;
 
-        case DNS_TYPE_RSIG:
-            message += "RSIG";
+        case DNS_TYPE_RRSIG:
+            message += "RRSIG";
             message += " ";
             switch (answer->record.RSIG->type) {
                 case DNS_TYPE_A:
@@ -256,7 +256,7 @@ std::string parse_stats(rr_answer* answer) {
                     message += "DNSKEY";
                     break;
 
-                case DNS_TYPE_RSIG:
+                case DNS_TYPE_RRSIG:
                     message += "RSIG";
                     break;
 
