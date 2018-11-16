@@ -50,10 +50,10 @@ int sniff(sniff_handler *handler) {
     b32 netmask = handler->netmask;
 
     /* make sure we're capturing on an Ethernet device */
-    //if (pcap_datalink(session) != DLT_EN10MB) {
-    //    fprintf(stderr, "%s is not an Ethernet\n", dev);
-    //    exit(EXIT_FAILURE);
-    //}
+    if (pcap_datalink(session) != DLT_EN10MB) {
+        fprintf(stderr, "%s is not an Ethernet\n", dev);
+        exit(EXIT_FAILURE);
+    }
 
     /* create sniff-filter */
     if(pcap_compile(session, &filter_exp, FILTER_EXPRESSION, 0, netmask) == -1) {
