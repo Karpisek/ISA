@@ -494,7 +494,6 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
 
     std::cout << "tu som" << std::endl;
     if((ntohs(*(b16 *) *packet) & 0xC000) == 0xC000) {
-        std::cout << "tu tez" << std::endl;
         int offset = ntohs(*(b16 *) *packet) & 0x3FFF;
         *packet += sizeof(b16);
 
@@ -510,17 +509,20 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
     (*packet)++;
     length++;
 
+    std::cout << "1" << std::endl;
     if(next_label_size == 0) {
         (*output).pop_back();
         return length;
     }
 
+    std::cout << "2" << std::endl;
     /* add characters to output string in range of defined label */
     for(int i = 0; i < next_label_size; i++) {
         *output += **packet;
         (*packet)++;
         length++;
     }
+    std::cout << "3" << std::endl;
 
     *output += '.';
 
