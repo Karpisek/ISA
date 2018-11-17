@@ -770,7 +770,7 @@ int parse_bitmap_field(const b8 **packet, std::string *output) {
     }
 
     if (output->length() > 0) {
-        output->pop_back();
+        //output->pop_back();
     }
 
     return bitmap_len + 2;
