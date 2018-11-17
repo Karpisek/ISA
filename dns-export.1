@@ -11,29 +11,37 @@ dns-export \- gain stuctured informations of DNS responses in human readable for
 .SH DESCRIPTION
 .B dns-export
 captures packages on selected interface and searches for DNS responses in which are the answers formatted as follows:\n
-domain-name rr-type rr-answer count
-.LP
-where \fIdomain-name\fR is the requested domain name, \fIrr-type\fR is the DNS type of the answer, \fIrr-answer\fR is body of the DNS answer and \fIcount\fR which means how many same answers on this format where analyzed. On default
+domain-name rr-type rr-answer count\n
+where \fIdomain-name\fR is the requested domain name, \fIrr-type\fR is the DNS type of the answer, \fIrr-answer\fR is body of the DNS answer and \fIcount\fR which means how many same answers on this format where analyzed.\n
+On default
 .B dns-export
-runs untill signal \fBSIGINT\fR occures. Whenever \fBSIGUSR1\fR occures dns-export prints statistics which were captured from the start of dns-export to default output.
+runs untill signal \fBSIGINT\fR occures. \n
+Whenever \fBSIGUSR1\fR occures dns-export prints statistics which were captured from the start of dns-export to default output.\n
 .SH OPTIONS
 .TP
 .BR \-i = \fIINTERFACE\fR
 Selects interface device on which should be listened on.
 .TP
 .BR \-s = \fISYSLOG\fR
-Specifies syslog server where should be statistics send (on port 514) in 60 second period (by default). It supports \fIhostname\fR, \fIIPv4\fR and \fIIPv6\fR format by specifying the syslog server. To the head of original message are the syslog information added that are specified in RFC 5424, more details are shown in decumentation.
+Specifies syslog server where should be statistics send (on port 514) in 60 second period (by default).\n
+It supports \fIhostname\fR, \fIIPv4\fR and \fIIPv6\fR format by specifying the syslog server.\n
+To the head of original message are the syslog information added that are specified in RFC 5424, more details are shown in decumentation.
 .TP
 .BR \-r = \fIFILE\fR
-When used, \fBdns-export\fR uses the selected .pcap file as the packet stream instead of interface. If \fBSYSLOG\fR server is specified statistics are send only when EOF of selected file is reached. If no \fBSYSLOG\fR server is present, statistics are printed to the default output at the end of the program. In both cases the brogram ends after sending/printing the statistics. Can't be selected together with \fB-i\fR   
+When used, \fBdns-export\fR uses the selected .pcap file as the packet stream instead of interface.\n
+If \fBSYSLOG\fR server is specified statistics are send only when EOF of selected file is reached. If no \fBSYSLOG\fR server is present, statistics are printed to the default output at the end of the program.\n
+In both cases the brogram ends after sending/printing the statistics.\n
+Can't be selected together with \fB-i\fR   
 .TP
 .BR \-t = \fITIME\fR
 Changes the default period of sending statistics to syslog. 
 \fISYSLOG\fR must be defined.
 .TP
 .BR \-c\fR
-Multiple statistics are send in one sysloge message, maximal size of syslog message is 1kB. Statistics are separated with " ".
+Multiple statistics are send in one sysloge message, maximal size of syslog message is 1kB.\n
+Statistics are separated with " ".
 \fISYSLOG\fR must be defined.
 .TP
 .BR \-f\fR
-If selected, \fBdns-export\fR will support fragmentation of DNS responses. This functionality is proprietal an should be used on own risk with no warranty.      
+If selected, \fBdns-export\fR will support fragmentation of DNS responses.\n
+This functionality is proprietal an should be used on own risk with no warranty.      
