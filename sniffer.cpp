@@ -403,8 +403,10 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
      */
     const b8* packet_copy = (b8 *) *packet;
 
+    std::cout << "before name" << std::endl;
     get_name(&packet_copy, header, &answer->qname);
     *packet += RESOURCE_RECORD_NAME_OFFSET;
+    std::cout << "after name" << std::endl;
 
     answer->type = htons(*(b16 *) *packet);
     *packet += sizeof(b16);
