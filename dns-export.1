@@ -11,8 +11,9 @@ dns-export \- gain stuctured informations of DNS responses in human readable for
 .SH DESCRIPTION
 .B dns-export
 captures packages on selected interface and searches for DNS responses in which are the answers formatted as follows:
-\r
-domain-name rr-type rr-answer count\r
+.LP
+domain-name rr-type rr-answer count
+.LP
 where \fIdomain-name\fR is the requested domain name, \fIrr-type\fR is the DNS type of the answer, \fIrr-answer\fR is body of the DNS answer and \fIcount\fR which means how many same answers on this format where analyzed. On default
 .B dns-export
 runs untill signal \fBSIGINT\fR occures. Whenever \fBSIGUSR1\fR occures dns-export prints statistics which were captured from the start of dns-export to default output.
