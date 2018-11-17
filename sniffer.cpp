@@ -80,7 +80,7 @@ int sniff(sniff_handler *handler) {
                 print_statistics(0);
             }
 
-            raise(EX_PROTOCOL, e.what());
+            raise(EX_PROTOCOL, ERR_SNIFFING);
         }
         catch (std::exception& e) {
             raise(EX_SOFTWARE, ERR_UNDEF);
@@ -504,7 +504,7 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
     length++;
 
     if(next_label_size == 0) {
-        //(*output).pop_back();
+        (*output).pop_back();
         return length;
     }
 
