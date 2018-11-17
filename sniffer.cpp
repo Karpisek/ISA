@@ -313,6 +313,7 @@ dns_protocol* process_dns(const b8 *packet, bool tcp_flag) {
 
     /* receiving dns_body */
     dns->body = get_dns_body(&packet, dns->header);
+    std::cout << "dns bdoy" << std::endl;
 
     return dns;
 }
