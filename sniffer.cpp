@@ -294,7 +294,7 @@ tcp_fragment* get_tcp_fragment(tcp_protocol *tcp) {
 
 
     for(auto frag : global_fragments) {
-        if(frag->id == tcp->ack) {
+        if((unsigned int)frag->id == tcp->ack) {
             return frag;
         }
     }
