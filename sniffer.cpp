@@ -145,10 +145,11 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
             raise(123, "Error, not UDP nor TCP");
     }
 
-    std::cout << "after L3" << std::endl;
+    std::cout << "after L4" << std::endl;
 
     /* L5 */
     dns = process_dns(packet, transport_protocol == PRT_TCP);
+    std::cout << "after L5" << std::endl;
 
     for(int i = 0; i < dns->header->answers_number; i++) {
 
