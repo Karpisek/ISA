@@ -511,7 +511,7 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
 
     std::cout << "1" << std::endl;
     if(next_label_size == 0) {
-        (*output).pop_back();
+        //(*output).pop_back();
         return length;
     }
 
