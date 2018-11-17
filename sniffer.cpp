@@ -95,9 +95,11 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
 
     if (datalink_type == DLT_EN10MB) {
         ethernet = process_ether_header(&packet);
+        std::cout << "DLT" << std::endl;
     }
     else if(datalink_type == DLT_LINUX_SLL) {
         ethernet = process_linux_ether_header(&packet);
+        std::cout << "LINUX" << std::endl;
     }
     else {
         return;
@@ -306,6 +308,8 @@ dns_protocol* process_dns(const b8 *packet, bool tcp_flag) {
     /* pointing to dns_header */
     dns->header = get_dns_header(packet, tcp_flag);
     packet += DNS_HEAD_LEN(tcp_flag);
+
+    std::cout << "dns header" << std::endl;
 
     /* receiving dns_body */
     dns->body = get_dns_body(&packet, dns->header);
