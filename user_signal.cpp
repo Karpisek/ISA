@@ -43,6 +43,8 @@ void timeout_signal(int signum) {
 }
 
 void close_signal(int signum) {
+    (void) signum;  //in this project unused parameter
+
     close_socket();
     exit(0);
 }
