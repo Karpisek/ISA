@@ -486,7 +486,10 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
 }
 
 int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
+    static int count = 0;
+    count++;
 
+    std::cout << count << std::endl;
     int length = 0;
 
     if((ntohs(*(b16 *) *packet) & 0xC000) == 0xC000) {
