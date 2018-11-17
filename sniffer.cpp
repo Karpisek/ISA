@@ -357,6 +357,7 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
     for(int i = 0; i < ques_num; i++) {
         body->questions[i] = get_query_record(packet, header->raw_header);
     }
+    std::cout << "quest" << std::endl;
 
     /* allocates memory for all answer pointers */
     int answ_num = header->answers_number;
@@ -366,6 +367,7 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
     for(int i = 0; i < answ_num; i++) {
         body->answers[i] = get_answers_record(packet, header->raw_header);
     }
+    std::cout << "answ" << std::endl;
 
     return body;
 }
