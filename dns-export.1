@@ -32,9 +32,9 @@ When used, \fBdns-export\fR uses the selected .pcap file as the packet stream in
 Changes the default period of sending statistics to syslog. 
 \fISYSLOG\fR must be defined.
 .TP
-.BR \-c
+.BR \-c\fR
 Multiple statistics are send in one sysloge message, maximal size of syslog message is 1kB. Statistics are separated with " ".
 \fISYSLOG\fR must be defined.
 .TP
-.BR \-f
-A     
+.BR \-f\fR
+If selected, \fBdns-export\fR will support fragmentation of DNS responses. This functionality is proprietal an should be used on own risk with no warranty.      
