@@ -95,11 +95,9 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
 
     if (datalink_type == DLT_EN10MB) {
         ethernet = process_ether_header(&packet);
-        std::cout << "DLT" << std::endl;
     }
     else if(datalink_type == DLT_LINUX_SLL) {
         ethernet = process_linux_ether_header(&packet);
-        std::cout << "LINUX" << std::endl;
     }
     else {
         return;
@@ -126,7 +124,6 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
     } else {
         return;
     }
-    std::cout << "before l4" << std::endl;
     /* L4 */
     switch(transport_protocol) {
         case PRT_UDP:
@@ -135,7 +132,6 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
             break;
 
         case PRT_TCP:
-            std::cout << "super tcp" << std::endl;
             /* if I get false -> tcp is fragmented, process next packet*/
             if(!process_tcp_header(&packet, tcp, ethernet, ip4, ip6)) {
                 return;
@@ -147,11 +143,8 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
             raise(123, "Error, not UDP nor TCP");
     }
 
-    std::cout << "after L4" << std::endl;
-
     /* L5 */
     dns = process_dns(packet, transport_protocol == PRT_TCP);
-    std::cout << "after L5" << std::endl;
 
     for(int i = 0; i < dns->header->answers_number; i++) {
 
@@ -235,10 +228,8 @@ udp_protocol* process_upd_header(const b8 *packet) {
 }
 
 bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6) {
-    std::cout << "tcp" << std::endl;
 
     if(!global_parameters.fragmentation.defined) {
-        std::cout << "<<<" << std::endl;
         return false;
         // TODO ERROR not supported
     }
@@ -309,11 +300,8 @@ dns_protocol* process_dns(const b8 *packet, bool tcp_flag) {
     dns->header = get_dns_header(packet, tcp_flag);
     packet += DNS_HEAD_LEN(tcp_flag);
 
-    std::cout << "dns header" << std::endl;
-
     /* receiving dns_body */
     dns->body = get_dns_body(&packet, dns->header);
-    std::cout << "dns bdoy" << std::endl;
 
     return dns;
 }
@@ -357,7 +345,6 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
     for(int i = 0; i < ques_num; i++) {
         body->questions[i] = get_query_record(packet, header->raw_header);
     }
-    std::cout << "quest" << std::endl;
 
     /* allocates memory for all answer pointers */
     int answ_num = header->answers_number;
@@ -367,7 +354,6 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
     for(int i = 0; i < answ_num; i++) {
         body->answers[i] = get_answers_record(packet, header->raw_header);
     }
-    std::cout << "answ" << std::endl;
 
     return body;
 }
@@ -391,7 +377,6 @@ rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
 
 //TODO: free free !!!
 rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
-    std::cout << "start answ" << std::endl;
     rr_answer *answer;
 
     answer = new rr_answer;
@@ -404,10 +389,8 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
      */
     const b8* packet_copy = (b8 *) *packet;
 
-    std::cout << "before name" << std::endl;
     get_name(&packet_copy, header, &answer->qname);
     *packet += RESOURCE_RECORD_NAME_OFFSET;
-    std::cout << "after name" << std::endl;
 
     answer->type = htons(*(b16 *) *packet);
     *packet += sizeof(b16);
@@ -489,10 +472,8 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
     static int count = 0;
     count++;
 
-    std::cout << count << std::endl;
     int length = 0;
 
-    std::cout << "tu som" << std::endl;
     if((ntohs(*(b16 *) *packet) & 0xC000) == 0xC000) {
         int offset = ntohs(*(b16 *) *packet) & 0x3FFF;
         *packet += sizeof(b16);
@@ -503,15 +484,12 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
 
         return length;
     }
-    std::cout << "tuna" << std::endl;
 
     int next_label_size = **packet;
     (*packet)++;
     length++;
 
-    std::cout << "1" << std::endl;
     if(next_label_size == 0) {
-        std::cout << output->length() << std::endl;
         if(output->length() > 0) {
             output->pop_back();
         }
@@ -519,14 +497,12 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
         return length;
     }
 
-    std::cout << "2" << std::endl;
     /* add characters to output string in range of defined label */
     for(int i = 0; i < next_label_size; i++) {
         *output += **packet;
         (*packet)++;
         length++;
     }
-    std::cout << "3" << std::endl;
 
     *output += '.';
 
