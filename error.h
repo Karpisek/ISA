@@ -21,6 +21,7 @@
 #define ERR_UNDEFINED_ARG "Unsupported argument, see man page for more information"
 #define ERR_ARG_COLLISION "This argument combination is not allowed, see man page for more information"
 #define ERR_SETTING_UP "An error occured while setting up sniffer. Make you sure that you are using all params correctly"
+#define ERR_TIMEOUT "Timeout cannot be lower then 1 second"
 
 /* sniff errors */
 #define ERR_NETMASK "Can't get netmask for device"

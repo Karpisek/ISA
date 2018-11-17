@@ -73,6 +73,12 @@ void check_collisions() {
     if(global_parameters.timeout.defined && !global_parameters.server.defined) {
         raise(EX_USAGE, ERR_ARG_COLLISION);
     }
+
+    if(global_parameters.timeout.defined) {
+        if(global_parameters.timeout.value.i < 1) {
+            raise(EX_USAGE, ERR_TIMEOUT);
+        }
+    }
 }
 
 
