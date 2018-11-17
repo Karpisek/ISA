@@ -80,7 +80,7 @@ int sniff(sniff_handler *handler) {
                 print_statistics(0);
             }
 
-            raise(EX_PROTOCOL, ERR_SNIFFING);
+            raise(EX_PROTOCOL, e.what());
         }
         catch (std::exception& e) {
             raise(EX_SOFTWARE, ERR_UNDEF);
