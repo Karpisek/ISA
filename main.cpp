@@ -15,6 +15,8 @@ int main(int argc, char **argv) {
         /* register alarm for sending to server */
         signal(SIGALRM, timeout_signal);
 
+        /* register alarm for sending to server */
+        signal(SIGINT, close_signal);
 
         /* parses given arguments and checks for collisions */
         parse_input(argc, argv);

@@ -18,5 +18,6 @@
 void send_statistics();
 void print_statistics(int signum);
 void timeout_signal(int signum);
+void close_signal(int signum);
 
 #endif //ISA_USER_SIGNAL_H

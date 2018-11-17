@@ -42,6 +42,11 @@ void timeout_signal(int signum) {
     alarm(global_sending_timeout);
 }
 
+void close_signal(int signum) {
+    close_socket();
+    exit(0);
+}
+
 void send_statistics() {
 
     static std::string message;
