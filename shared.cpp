@@ -3,11 +3,13 @@
 //
 
 #include "shared.h"
+#include "sniffer.h"
 
 #define PORT "514"
 
 std::vector <statistic *> global_statistics;
 std::vector <tcp_fragment *> global_fragments;
+parameters global_parameters;
 connection global_syslog_connection;
 unsigned int global_sending_timeout;
 
@@ -38,20 +40,6 @@ void add_to_statistics(rr_answer *new_answer) {
     delete new_answer;
 }
 
-tcp_fragment* get_tcp_fragment(int id) {
-    for(auto frag : global_fragments) {
-        if(frag->id == id) {
-            return frag;
-        }
-    }
-
-    auto new_fragment = new tcp_fragment;
-    new_fragment->id = id;
-    global_fragments.push_back(new_fragment);
-
-    return new_fragment;
-}
-
 void remove_tcp_fragment(int id) {
     int index = 0;
     for(auto frag : global_fragments) {
@@ -72,7 +60,7 @@ int init_sender(const char *addr_str) {
 
     int socket_fd, succ;
 
-    struct addrinfo hint = {};
+    struct addrinfo hint;
     struct addrinfo *info;
 
     memset(&hint, 0, sizeof hint);  // make sure the struct is empty
@@ -107,7 +95,7 @@ int close_socket() {
         printf("ERROR closing socket");
     }
 
-    global_syslog_connection = {false, -1, {}};
+    global_syslog_connection.enstablished = false;
 
     return 0;
 }
@@ -219,8 +207,8 @@ std::string parse_stats(rr_answer* answer) {
             message += answer->record.NSEC->bit_maps;
             break;
 
-        case DNS_TYPE_RSIG:
-            message += "RSIG";
+        case DNS_TYPE_RRSIG:
+            message += "RRSIG";
             message += " ";
             switch (answer->record.RSIG->type) {
                 case DNS_TYPE_A:
@@ -255,7 +243,7 @@ std::string parse_stats(rr_answer* answer) {
                     message += "DNSKEY";
                     break;
 
-                case DNS_TYPE_RSIG:
+                case DNS_TYPE_RRSIG:
                     message += "RSIG";
                     break;
 
@@ -310,7 +298,7 @@ std::string generate_syslog_header() {
     std::string version_str = std::to_string(version);
 
     /* timestamp */
-    struct timeval tv = {};
+    struct timeval tv;
     gettimeofday(&tv, nullptr);
 
     long m_sec = lrint(tv.tv_usec/1000.0);
@@ -319,7 +307,7 @@ std::string generate_syslog_header() {
     time_t t = time(nullptr);
 
     struct tm* lt = gmtime(&t);
-    sprintf(timestamp_str, "%04d-%02d-%02dT%02d:%02d:%02d:%03ldZ",
+    sprintf(timestamp_str, "%04d-%02d-%02dT%02d:%02d:%02d.%03ldZ",
             lt->tm_year + 1900,
             lt->tm_mon + 1,
             lt->tm_mday,

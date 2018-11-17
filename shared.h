@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include <vector>
-#include <string>
+#include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <cstdio>
@@ -16,6 +16,7 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <cmath>
+#include <ifaddrs.h>
 
 #include "records.h"
 #include "error.h"
@@ -29,31 +30,57 @@
 #define NIL_VALUE "- - -"
 #define APP_NAME "dns-export"
 
-typedef struct _connection {
+typedef struct _connection connection;
+typedef struct _statistic statistic;
+typedef struct _tcp_fragment tcp_fragment;
+typedef struct _parameters parameters;
+typedef struct _argument argument;
+typedef union _arg_val arg_val;
+
+struct _connection {
     bool enstablished;
     int connection;
     addrinfo *info;
-} connection;
+};
 
-typedef struct _statistic {
+struct _statistic {
     std::string text;
     int count;
-} statistic;
+};
 
-typedef struct _tcp_fragment {
+struct _tcp_fragment {
     int id;
     unsigned char packet[65535];
     int last;
-} tcp_fragment;
+};
+
+union _arg_val {
+    int i;
+    char *str;
+};
+
+struct _argument {
+    bool defined;
+    arg_val value;
+};
+
+struct _parameters {
+    argument interface;
+    argument resource;
+    argument server;
+    argument timeout;
+    argument concatenate;
+    argument fragmentation;
+};
 
 extern unsigned int global_sending_timeout;
 extern std::vector <statistic *> global_statistics;
 extern std::vector <tcp_fragment *> global_fragments;
 extern connection global_syslog_connection;
+extern parameters global_parameters;
 
 /* statistic procedures */
 void add_to_statistics(rr_answer *record);
-tcp_fragment* get_tcp_fragment(int id);
 void remove_tcp_fragment(int id);
 
 /* sender procedures */

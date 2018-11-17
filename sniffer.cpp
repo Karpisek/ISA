@@ -43,17 +43,11 @@ sniff_handler *init_file(char *filename) {
 
 int sniff(sniff_handler *handler) {
 
-    struct bpf_program filter_exp = {};		/* The compiled filter expression */
+    struct bpf_program filter_exp;		/* The compiled filter expression */
 
     char *dev = handler->dev;
     pcap_t *session = handler->session;
     b32 netmask = handler->netmask;
-
-    /* make sure we're capturing on an Ethernet device */
-    if (pcap_datalink(session) != DLT_EN10MB) {
-        fprintf(stderr, "%s is not an Ethernet\n", dev);
-        exit(EXIT_FAILURE);
-    }
 
     /* create sniff-filter */
     if(pcap_compile(session, &filter_exp, FILTER_EXPRESSION, 0, netmask) == -1) {
@@ -67,7 +61,10 @@ int sniff(sniff_handler *handler) {
         return(2);
     }
 
-    if(pcap_loop(session, 0, process_packet, nullptr) == 0) {
+    auto *params = new loop_parameters;
+    params->session = session;
+
+    if(pcap_loop(session, 0, process_packet, (u_char *) params) == 0) {
         send_statistics();
     }
 
@@ -77,7 +74,8 @@ int sniff(sniff_handler *handler) {
 }
 
 void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *packet) {
-    (void) args;
+    pcap *session = ((loop_parameters *) args)->session;
+
     (void) header;
 
     ethernet_protocol* ethernet = nullptr;
@@ -92,8 +90,19 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
     dns_protocol* dns = nullptr;
 
     /* L2 */
-    ethernet = process_ether_header(&packet);
-    packet += ETHERNET_HEADER_LEN;
+    /* make sure we're capturing on an Ethernet device */
+    int datalink_type = pcap_datalink(session);
+
+    if (datalink_type == DLT_EN10MB) {
+        ethernet = process_ether_header(&packet);
+    }
+    else if(datalink_type == DLT_LINUX_SLL) {
+        ethernet = process_linux_ether_header(&packet);
+    }
+    else {
+        return;
+    }
+
 
     /* L3 */
     if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
@@ -154,6 +163,19 @@ ethernet_protocol* process_ether_header(const unsigned char **packet) {
     /* typecast ethernet header */
     ethernet = (ethernet_protocol *) *packet;
 
+    *packet += DLT_EN10MB_HEADER_LEN;
+
+    return ethernet;
+}
+
+ethernet_protocol* process_linux_ether_header(const b8 **packet) {
+    auto *ethernet = new ethernet_protocol;   /* Ethernet header */
+
+    /* getting the type of protocol */
+    *packet += 14;
+    ethernet->type = **packet;
+    *packet += 2;
+
     return ethernet;
 }
 
@@ -207,13 +229,14 @@ udp_protocol* process_upd_header(const b8 *packet) {
 }
 
 bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6) {
+    if(!global_parameters.fragmentation.defined) {
+        return false;
+        // TODO ERROR not supported
+    }
 
     tcp = (tcp_protocol *) *packet;
 
     *packet += TCP_HEAD_LEN(tcp->offset_n);
-
-    int seq = ntohl(tcp->seq);
-    (void)seq;  //in this project its unused
 
     /* fragmentation */
     int data_len = 0;
@@ -229,7 +252,7 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
 
     data_len -= TCP_HEAD_LEN(tcp->offset_n);
 
-    tcp_fragment *fragment = get_tcp_fragment(tcp->ack);
+    tcp_fragment *fragment = get_tcp_fragment(tcp);
 
     for (int i = 0; i < data_len; i++) {
         fragment->packet[fragment->last] = **packet;
@@ -249,6 +272,23 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
     remove_tcp_fragment(fragment->id);
 
     return true;
+}
+
+tcp_fragment* get_tcp_fragment(tcp_protocol *tcp) {
+
+
+    for(auto frag : global_fragments) {
+        if(frag->id == tcp->ack) {
+            return frag;
+        }
+    }
+
+    auto new_fragment = new tcp_fragment;
+    new_fragment->id = tcp->ack;
+    //new_fragment->initial_seq = tcp->se
+    global_fragments.push_back(new_fragment);
+
+    return new_fragment;
 }
 
 dns_protocol* process_dns(const b8 *packet, bool tcp_flag) {
@@ -401,7 +441,7 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     answer->record = get_dnskey_record(*packet, answer);
                     break;
 
-                case DNS_TYPE_RSIG:
+                case DNS_TYPE_RRSIG:
                     answer->record = get_rsig_record(*packet, answer, header);
                     break;
 
@@ -414,6 +454,8 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     break;
 
                 default:
+                    //jump over data
+                    *packet += answer->len;
                     return nullptr;
 
             }
@@ -742,7 +784,7 @@ rr_data get_ds_record(const b8 *packet, const rr_answer *answer) {
 
     record = new ds_record;
 
-    record->key_tag = ntohs(* (b16 *) packet);
+    record->key_tag = ntohs(*(b16 *) packet);
     packet += sizeof(b16);
 
     record->algorithm = *packet;
@@ -752,7 +794,7 @@ rr_data get_ds_record(const b8 *packet, const rr_answer *answer) {
     packet++;
 
     std::stringstream stream;
-    for(int i = 0; i < DS_DIGEST_LEN(answer->len); i++) {
+    for (int i = 0; i < DS_DIGEST_LEN(answer->len); i++) {
         stream << std::setfill('0') << std::setw(2) << std::hex << (int) *packet;
         packet++;
     }

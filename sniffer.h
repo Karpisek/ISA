@@ -42,10 +42,15 @@ typedef unsigned int b32;
 typedef unsigned short b16;
 typedef unsigned char b8;
 
-#define ETHERNET_HEADER_LEN 14
+#define DLT_EN10MB_HEADER_LEN 14
+#define DLT_LINUX_SLL_HEADER_LEN 16
 #define MAC_ADDR_LEN 6
 #define ETHER_TYPE_IP4 0x0800
 #define ETHER_TYPE_IP6 0x86DD
+
+typedef struct _loop_parameters {
+    pcap *session;
+} loop_parameters;
 
 /* Ethernet header
  *
@@ -223,8 +228,8 @@ typedef struct udp_protocol{
 
 #define TCP_HEAD_LEN(offset_n)      ((offset_n >> 4) * 4)
 #define TCP_PUSH_FLAG(flags)        ((flags >> 3) & 0x1)
-#define TCP_ACK_FLAG(flags)         ((flags >> 4) & 0b1)
-#define TCP_SYN_FLAG(flags)         ((flags >> 1) & 0b1)
+#define TCP_ACK_FLAG(flags)         ((flags >> 4) & 0x1)
+#define TCP_SYN_FLAG(flags)         ((flags >> 1) & 0x1)
 #define TCP_DATA_LEN
 
 typedef struct tcp_protocol{
@@ -361,6 +366,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
 
 /* L2 header processing */
 ethernet_protocol* process_ether_header(const b8 **packet);
+ethernet_protocol* process_linux_ether_header(const b8 **packet);
 
 /* L3 header processing */
 ip4_protocol* process_ip4_header(const b8 *packet);
@@ -393,6 +399,8 @@ rr_data get_dnskey_record(const b8 *packet, const rr_answer *answer);
 rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header);
 rr_data get_ds_record(const b8 *packet, const rr_answer *answer);
 rr_data get_nsec_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header);
+
+tcp_fragment* get_tcp_fragment(tcp_protocol *tcp);
 
 #endif //ISA_SNIFFER_H
 

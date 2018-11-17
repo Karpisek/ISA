@@ -44,7 +44,36 @@ void timeout_signal(int signum) {
 }
 
 void send_statistics() {
-    for(auto stat: global_statistics) {
-        syslog_send(generate_syslog_header() + stat->text + " " + std::to_string(stat->count));
+
+    static std::string message;
+    std::string new_message;
+
+    if(global_parameters.concatenate.defined) {
+        for(auto stat: global_statistics) {
+
+            new_message = generate_syslog_header() + stat->text + " " + std::to_string(stat->count);
+
+            if(message.length() + new_message.length() > 1000) {
+                syslog_send(message);
+                message = "";
+            } else {
+                if(message.length() > 0){
+                    message += "\n";
+                }
+
+                message += new_message;
+            }
+        }
+
+        if(message.length() > 0) {
+            syslog_send(message);
+        }
+
+    } else {
+
+        for(auto stat: global_statistics) {
+            new_message = generate_syslog_header() + stat->text + " " + std::to_string(stat->count);
+            syslog_send(new_message);
+        }
     }
 }
