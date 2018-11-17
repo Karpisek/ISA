@@ -29,7 +29,7 @@
 #define ERR_FILE "Problem with selected pcap file"
 #define ERR_FILTER "Can't parse filter for campture"
 
-#define ERR_SNIFFING "Something unexpacted sniffed, last statistics were send"
+#define ERR_SNIFFING "Something unexpacted sniffed, last statistics were send (without the last packet, where error ocurred)"
 #define ERR_PROTOCOL "Unsupported protocol"
 #define ERR_IP4 "Error in IPv4 header"
 #define ERR_IP6 "Error in IPv6 header"
