@@ -124,7 +124,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
     } else {
         return;
     }
-
+    std::cout << "before l4" << std::endl;
     /* L4 */
     switch(transport_protocol) {
         case PRT_UDP:
@@ -133,6 +133,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
             break;
 
         case PRT_TCP:
+            std::cout << "super tcp" << std::endl;
             /* if I get false -> tcp is fragmented, process next packet*/
             if(!process_tcp_header(&packet, tcp, ethernet, ip4, ip6)) {
                 return;
@@ -144,7 +145,9 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
             raise(123, "Error, not UDP nor TCP");
     }
 
-    /* L4 */
+    std::cout << "after L3" << std::endl;
+
+    /* L5 */
     dns = process_dns(packet, transport_protocol == PRT_TCP);
 
     for(int i = 0; i < dns->header->answers_number; i++) {
@@ -229,6 +232,8 @@ udp_protocol* process_upd_header(const b8 *packet) {
 }
 
 bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6) {
+    std::cout << "tcp" << std::endl;
+
     if(!global_parameters.fragmentation.defined) {
         std::cout << "<<<" << std::endl;
         return false;
@@ -770,7 +775,7 @@ int parse_bitmap_field(const b8 **packet, std::string *output) {
     }
 
     if (output->length() > 0) {
-        //output->pop_back();
+        output->pop_back();
     }
 
     return bitmap_len + 2;
