@@ -51,7 +51,7 @@ struct _statistic {
 struct _tcp_fragment {
     int id;
     unsigned char packet[65535];
-    int initial_seq;
+    int last;
 };
 
 union _arg_val {

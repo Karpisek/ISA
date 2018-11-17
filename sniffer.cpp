@@ -124,6 +124,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
     } else {
         return;
     }
+
     /* L4 */
     switch(transport_protocol) {
         case PRT_UDP:
@@ -143,7 +144,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
             raise(123, "Error, not UDP nor TCP");
     }
 
-    /* L5 */
+    /* L4 */
     dns = process_dns(packet, transport_protocol == PRT_TCP);
 
     for(int i = 0; i < dns->header->answers_number; i++) {
@@ -228,7 +229,6 @@ udp_protocol* process_upd_header(const b8 *packet) {
 }
 
 bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6) {
-
     if(!global_parameters.fragmentation.defined) {
         return false;
         // TODO ERROR not supported
@@ -255,7 +255,8 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
     tcp_fragment *fragment = get_tcp_fragment(tcp);
 
     for (int i = 0; i < data_len; i++) {
-        fragment->packet[0] = **packet;
+        fragment->packet[fragment->last] = **packet;
+        fragment->last++;
         (*packet)++;
     }
 
@@ -453,6 +454,8 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     break;
 
                 default:
+                    //jump over data
+                    *packet += answer->len;
                     return nullptr;
 
             }
@@ -469,8 +472,6 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
 }
 
 int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
-    static int count = 0;
-    count++;
 
     int length = 0;
 
@@ -490,10 +491,7 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
     length++;
 
     if(next_label_size == 0) {
-        if(output->length() > 0) {
-            output->pop_back();
-        }
-
+        (*output).pop_back();
         return length;
     }
 

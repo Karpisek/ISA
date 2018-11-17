@@ -44,6 +44,7 @@ void timeout_signal(int signum) {
 }
 
 void send_statistics() {
+
     static std::string message;
     std::string new_message;
 
@@ -57,7 +58,7 @@ void send_statistics() {
                 message = "";
             } else {
                 if(message.length() > 0){
-                    message += " ";
+                    message += "\n";
                 }
 
                 message += new_message;
@@ -69,6 +70,7 @@ void send_statistics() {
         }
 
     } else {
+
         for(auto stat: global_statistics) {
             new_message = generate_syslog_header() + stat->text + " " + std::to_string(stat->count);
             syslog_send(new_message);
