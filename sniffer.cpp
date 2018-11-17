@@ -391,6 +391,7 @@ rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
 
 //TODO: free free !!!
 rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
+    std::cout << "start answ" << std::endl;
     rr_answer *answer;
 
     answer = new rr_answer;
