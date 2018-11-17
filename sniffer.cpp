@@ -15,13 +15,13 @@ sniff_handler *init_interface(char *dev) {
     handler->dev = dev;
 
     if(pcap_lookupnet(dev, &handler->ip_address, &handler->netmask, error_buffer) == -1) {
-        fprintf(stderr, "Can't get netmask for device %s\n", dev);
+        raise(EX_NOHOST, ERR_NETMASK);
     }
 
     /* opens live capture */
     handler->session = pcap_open_live(dev, BUFSIZ, 1, 1000, error_buffer);
     if(handler->session == nullptr) {
-        raise(ERR_INTERFACE_OPEN, error_buffer);
+        raise(EX_NOHOST, ERR_INTERFACE);
     }
 
     return handler;
@@ -35,7 +35,7 @@ sniff_handler *init_file(char *filename) {
 
     handler->session = pcap_open_offline(filename, error_buffer);
     if(handler->session == nullptr) {
-        raise(ERR_INTERFACE_OPEN, error_buffer);
+        raise(EX_NOINPUT, ERR_FILE);
     }
 
     return handler;
@@ -45,27 +45,46 @@ int sniff(sniff_handler *handler) {
 
     struct bpf_program filter_exp;		/* The compiled filter expression */
 
-    char *dev = handler->dev;
     pcap_t *session = handler->session;
     b32 netmask = handler->netmask;
 
     /* create sniff-filter */
     if(pcap_compile(session, &filter_exp, FILTER_EXPRESSION, 0, netmask) == -1) {
-        fprintf(stderr, "Couldn't parse filter %s: %s\n", FILTER_EXPRESSION, pcap_geterr(session));
-        return(2);
+        raise(EX_SOFTWARE, ERR_FILTER);
     }
 
     /* activate sniff-filter */
     if(pcap_setfilter(session, &filter_exp) == -1){
-        fprintf(stderr, "Couldn't install filter %s: %s\n", FILTER_EXPRESSION, pcap_geterr(session));
-        return(2);
+        raise(EX_SOFTWARE, ERR_FILTER);
     }
 
     auto *params = new loop_parameters;
     params->session = session;
 
-    if(pcap_loop(session, 0, process_packet, (u_char *) params) == 0) {
-        send_statistics();
+    try {
+        if(pcap_loop(session, 0, process_packet, (u_char *) params) == 0) {
+            if(global_parameters.server.defined) {
+                send_statistics();
+            }
+            else {
+                print_statistics(0);
+            }
+        }
+    }
+    catch (std::exception& e) {
+        try {
+            if(global_parameters.server.defined) {
+                send_statistics();
+            }
+            else {
+                print_statistics(0);
+            }
+
+            raise(EX_PROTOCOL, ERR_SNIFFING);
+        }
+        catch (std::exception& e) {
+            raise(EX_SOFTWARE, ERR_UNDEF);
+        }
     }
 
     pcap_close(session);
@@ -100,7 +119,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
         ethernet = process_linux_ether_header(&packet);
     }
     else {
-        return;
+        raise(EX_PROTOCOL, ERR_PROTOCOL);
     }
 
 
@@ -122,7 +141,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
         packet += IP6_HEAD_LEN;
 
     } else {
-        return;
+        raise(EX_PROTOCOL, ERR_PROTOCOL);
     }
 
     /* L4 */
@@ -141,14 +160,13 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
             break;
 
         default:
-            raise(123, "Error, not UDP nor TCP");
+            raise(EX_PROTOCOL, ERR_PROTOCOL);
     }
 
-    /* L4 */
+    /* L5 */
     dns = process_dns(packet, transport_protocol == PRT_TCP);
 
     for(int i = 0; i < dns->header->answers_number; i++) {
-
         /* adding answers to global statistics */
         add_to_statistics(dns->body->answers[i]);
     }
@@ -186,17 +204,16 @@ ip4_protocol* process_ip4_header(const b8 *packet) {
     ip = (ip4_protocol *) packet;
 
     if(IP_HEAD_LEN(ip) < 20) {
-        raise(3, "wrong IP header cannot be smaller then 20 bytes");
+        raise(EX_PROTOCOL, ERR_IP4);
     }
 
     char buf[INET_ADDRSTRLEN];
     if(inet_ntop(AF_INET, &ip->dst, buf, INET_ADDRSTRLEN) == nullptr) {
-        raise(12);
+        raise(EX_PROTOCOL, ERR_IP4);
     }
 
-    // print IP src address
     if(inet_ntop(AF_INET, &ip->src, buf, INET_ADDRSTRLEN) == nullptr) {
-        raise(12);
+        raise(EX_PROTOCOL, ERR_IP4);
     }
 
     return ip;
@@ -209,12 +226,12 @@ ip6_protocol* process_ip6_header(const b8 *packet) {
 
     char buf[INET6_ADDRSTRLEN];
     if(inet_ntop(AF_INET6, &ip6->dst, buf, INET6_ADDRSTRLEN) == nullptr) {
-        raise(12);
+        raise(EX_PROTOCOL, ERR_IP6);
     }
 
     // print IP src address
     if(inet_ntop(AF_INET6, &ip6->src, buf, INET6_ADDRSTRLEN) == nullptr) {
-        raise(12);
+        raise(EX_PROTOCOL, ERR_IP6);
     }
 
     return ip6;
@@ -231,7 +248,6 @@ udp_protocol* process_upd_header(const b8 *packet) {
 bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6) {
     if(!global_parameters.fragmentation.defined) {
         return false;
-        // TODO ERROR not supported
     }
 
     tcp = (tcp_protocol *) *packet;
@@ -307,7 +323,6 @@ dns_protocol* process_dns(const b8 *packet, bool tcp_flag) {
     return dns;
 }
 
-// todo free mem
 dns_header* get_dns_header(const b8 *packet, bool tcp_flag) {
     raw_dns_header *raw_header;
     dns_header *header;
@@ -332,7 +347,6 @@ dns_header* get_dns_header(const b8 *packet, bool tcp_flag) {
     return header;
 }
 
-//  TODO Free mem !!!
 dns_body* get_dns_body(const b8 **packet, dns_header *header) {
     dns_body *body;
 
@@ -359,7 +373,6 @@ dns_body* get_dns_body(const b8 **packet, dns_header *header) {
     return body;
 }
 
-// TODO: Free mem !!!
 rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
     rr_question *question;
 
@@ -376,7 +389,6 @@ rr_question* get_query_record(const b8 **packet, raw_dns_header *header) {
     return question;
 }
 
-//TODO: free free !!!
 rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
     rr_answer *answer;
 
@@ -454,7 +466,7 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
                     break;
 
                 default:
-                    //jump over data
+                    // unsupported DNS type, jump over
                     *packet += answer->len;
                     return nullptr;
 
@@ -462,10 +474,11 @@ rr_answer *get_answers_record(const b8 **packet, raw_dns_header *header) {
             break;
 
         default:
+            *packet += answer->len;
             return nullptr;
     }
 
-    //jump over data
+    // jump over data
     *packet += answer->len;
 
     return answer;
@@ -507,7 +520,6 @@ int get_name(const b8 **packet, raw_dns_header *header, std::string *output) {
     return length + get_name(packet, header, output);
 }
 
-// TODO: free mem !!!
 rr_data get_a_record(const b8 *packet) {
     char buf[INET_ADDRSTRLEN];
     rr_data data;
@@ -521,7 +533,6 @@ rr_data get_a_record(const b8 *packet) {
     return data;
 }
 
-// TODO: free mem !!!
 rr_data get_aaaa_record(const b8 *packet) {
     char buf[INET6_ADDRSTRLEN];
     rr_data data;
@@ -536,7 +547,6 @@ rr_data get_aaaa_record(const b8 *packet) {
     return data;
 }
 
-// TODO: free mem !!!
 rr_data get_cname_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     cname_record *record;
@@ -550,7 +560,6 @@ rr_data get_cname_record(const b8 *packet, raw_dns_header *header) {
     return data;
 }
 
-// TODO: free mem !!!
 rr_data get_mx_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     mx_record *record;
@@ -567,7 +576,6 @@ rr_data get_mx_record(const b8 *packet, raw_dns_header *header) {
     return data;
 }
 
-// TODO: free mem !!!
 rr_data get_ns_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     ns_record *record;
@@ -581,7 +589,6 @@ rr_data get_ns_record(const b8 *packet, raw_dns_header *header) {
     return data;
 }
 
-// TODO: free mem !!!
 rr_data get_soa_record(const b8 *packet, raw_dns_header *header) {
     rr_data data;
     soa_record *record;
@@ -611,7 +618,6 @@ rr_data get_soa_record(const b8 *packet, raw_dns_header *header) {
     return data;
 }
 
-// TODO: free mem !!!
 rr_data get_txt_record(const b8 *packet) {
     rr_data data;
     txt_record *record;

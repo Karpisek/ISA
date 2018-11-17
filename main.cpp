@@ -6,52 +6,64 @@
 
 int main(int argc, char **argv) {
 
-    /* user signal registration */
-    signal(SIGUSR1, print_statistics);
-
-    /* register alarm for sending to server */
-    signal(SIGALRM, timeout_signal);
-
     sniff_handler *handler = nullptr;
 
-    /* parses given arguments and checks for collisions */
-    parse_input(argc, argv);
-    check_collisions();
+    try {
+        /* user signal registration */
+        signal(SIGUSR1, print_statistics);
 
-    debug_print_args();
+        /* register alarm for sending to server */
+        signal(SIGALRM, timeout_signal);
 
-    /* timeout setting */
-    if(!global_parameters.timeout.defined) {
-        global_parameters.timeout.defined = true;
-        global_parameters.timeout.value.i = DEFAULT_TIMEOUT;
+
+        /* parses given arguments and checks for collisions */
+        parse_input(argc, argv);
+        check_collisions();
+
+        if(global_parameters.help.defined) {
+            std::cout << HELP_MESSAGE << std::endl;
+            exit(0);
     }
 
-    global_sending_timeout = (unsigned int) global_parameters.timeout.value.i;
+        /* timeout setting */
+        if(!global_parameters.timeout.defined) {
+            global_parameters.timeout.defined = true;
+            global_parameters.timeout.value.i = DEFAULT_TIMEOUT;
+        }
 
-    /* setting up syslog server */
-    if(global_parameters.server.defined) {
-        init_sender(global_parameters.server.value.str);
+        global_sending_timeout = (unsigned int) global_parameters.timeout.value.i;
 
-        /* setting alarm to sending data to server */
-        alarm(global_sending_timeout);
+        /* setting up syslog server */
+        if(global_parameters.server.defined) {
+            init_sender(global_parameters.server.value.str);
+
+            /* setting alarm to sending data to server */
+            alarm(global_sending_timeout);
+        }
+
+        /* starts sniffing on targeted device */
+        if(!global_parameters.interface.defined && !global_parameters.resource.defined) {
+            return 0;
+        }
+
+        if(global_parameters.interface.defined) {
+            handler = init_interface(global_parameters.interface.value.str);
+        }
+
+        if(global_parameters.resource.defined) {
+            handler = init_file(global_parameters.resource.value.str);
+        }
     }
 
-    /* starts sniffing on targeted device */
-    if(!global_parameters.interface.defined && !global_parameters.resource.defined) {
-        return 0;
+    catch (std::exception& e) {
+        raise(EX_SOFTWARE, ERR_SETTING_UP);
     }
 
-    if(global_parameters.interface.defined) {
-        handler = init_interface(global_parameters.interface.value.str);
-    }
-
-    if(global_parameters.resource.defined) {
-        handler = init_file(global_parameters.resource.value.str);
-    }
 
     if(handler != nullptr) {
         sniff(handler);
     }
 
+    close_socket();
     return 0;
 }

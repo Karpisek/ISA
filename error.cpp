@@ -5,7 +5,6 @@
 #include "error.h"
 
 void raise(int code, std::string message) {
-
     std::cerr << "ERROR " << code << " : " << message << std::endl;
     exit(code);
 }

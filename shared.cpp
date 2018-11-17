@@ -71,13 +71,13 @@ int init_sender(const char *addr_str) {
     /* get info about the host */
     succ = getaddrinfo(addr_str, PORT, &hint, &info);
     if(succ != 0) {
-        raise(22132, "Host not found");
+        raise(EX_NOHOST, ERR_HOST);
     }
 
     /* create socket */
     socket_fd = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
     if(socket_fd < 0) {
-        raise(55, "Socket failed");
+        raise(EX_NOHOST, ERR_SOCKET);
     }
 
     global_syslog_connection = {true, socket_fd, info};
@@ -88,11 +88,11 @@ int init_sender(const char *addr_str) {
 int close_socket() {
 
     if(!global_syslog_connection.enstablished) {
-        return 1;
+        return 0;
     }
 
     if(close(global_syslog_connection.connection) != 0) {
-        printf("ERROR closing socket");
+        raise(EX_SOFTWARE, ERR_CLOSE);
     }
 
     global_syslog_connection.enstablished = false;
@@ -103,7 +103,7 @@ int close_socket() {
 int syslog_send(std::string data_to_send) {
 
     if (!global_syslog_connection.enstablished) {
-        return 1;
+        raise(EX_SOFTWARE, ERR_SYSLOG);
     }
 
     sendto(global_syslog_connection.connection, data_to_send.c_str(), data_to_send.size(), 0, global_syslog_connection.info->ai_addr, global_syslog_connection.info->ai_addrlen);

@@ -9,7 +9,7 @@ void parse_input(int argc, char **argv) {
     opterr = 0;
     int c;
 
-    while ((c = getopt (argc, argv, "fcr:i:s:t:")) != -1) {
+    while ((c = getopt (argc, argv, "hfcr:i:s:t:")) != -1) {
         switch (c) {
             case 'r':
                 global_parameters.resource.defined = true;
@@ -39,46 +39,39 @@ void parse_input(int argc, char **argv) {
                 global_parameters.fragmentation.defined = true;
                 break;
 
+            case 'h':
+                global_parameters.help.defined = true;
+                break;
+
             case '?':
-                raise(ERR_UNDEFINED_PARAM, STR_ERR_UNDEFINED_PARAM);
+                raise(EX_USAGE, ERR_UNDEFINED_ARG);
 
             default:
-                abort();
+                raise(EX_USAGE, ERR_UNDEFINED_ARG);
         }
     }
-}
-
-void debug_print_args() {
-    if(global_parameters.resource.defined)
-        std::cout << "r: " << global_parameters.resource.value.str << std::endl;
-
-    if(global_parameters.interface.defined)
-        std::cout << "i: " << global_parameters.interface.value.str << std::endl;
-
-    if(global_parameters.server.defined)
-        std::cout << "s: " << global_parameters.server.value.str << std::endl;
-
-    if(global_parameters.timeout.defined)
-        std::cout << "t: " << global_parameters.timeout.value.i << std::endl;
 }
 
 void check_collisions() {
 
     // -r and -i cannot be defined together
     if(global_parameters.resource.defined && global_parameters.interface.defined) {
-        std::cerr << "argument -r and -i cannot be defined together" << std::endl;
-        exit(EXIT_FAILURE);
+        raise(EX_USAGE, ERR_ARG_COLLISION);
     }
 
     // -r and -t cannot be defined together
     if(global_parameters.resource.defined && global_parameters.timeout.defined) {
-        std::cerr << "argument -r and -t cannot be defined together" << std::endl;
-        exit(EXIT_FAILURE);
+        raise(EX_USAGE, ERR_ARG_COLLISION);
     }
 
     // -t and not -s defined
     if(global_parameters.timeout.defined && !global_parameters.server.defined) {
-        exit(0);
+        raise(EX_USAGE, ERR_ARG_COLLISION);
+    }
+
+    // -c and not -s defined
+    if(global_parameters.timeout.defined && !global_parameters.server.defined) {
+        raise(EX_USAGE, ERR_ARG_COLLISION);
     }
 }
 

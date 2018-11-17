@@ -18,7 +18,6 @@ void print_statistics(int signum) {
 
         std::cout << std::endl;
         exit(0);
-
     }
 
     /* ignoring signal */
@@ -51,14 +50,14 @@ void send_statistics() {
     if(global_parameters.concatenate.defined) {
         for(auto stat: global_statistics) {
 
-            new_message = generate_syslog_header() + stat->text + " " + std::to_string(stat->count);
+            new_message = stat->text + " " + std::to_string(stat->count);
 
             if(message.length() + new_message.length() > 1000) {
-                syslog_send(message);
+                syslog_send(message.insert(0, generate_syslog_header()));
                 message = "";
             } else {
                 if(message.length() > 0){
-                    message += "\n";
+                    message += " ";
                 }
 
                 message += new_message;
@@ -66,7 +65,7 @@ void send_statistics() {
         }
 
         if(message.length() > 0) {
-            syslog_send(message);
+            syslog_send(message.insert(0, generate_syslog_header()));
         }
 
     } else {

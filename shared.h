@@ -71,6 +71,7 @@ struct _parameters {
     argument timeout;
     argument concatenate;
     argument fragmentation;
+    argument help;
 };
 
 extern unsigned int global_sending_timeout;

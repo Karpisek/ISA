@@ -5,15 +5,6 @@
 #ifndef ISA_SNIFFER_H
 #define ISA_SNIFFER_H
 
-#define ERR_INTERFACE_OPEN 1            /* couldn't open device */
-#define FILTER_EXPRESSION "port 53"     /* The filter expression port DNS */
-
-#define ERR_ETHERNET_HEADERS 2          /* device doesn't provide Ethernet headers */
-#define STR_ERR_ETHERNET_HEADERS "Selected device doesn't provide Ethernet headers - not supported"
-
-#define DEBUG_PRINT(info, data)         (std::cout << "\t" << info << ": " << data << std::endl)
-#define DEBUG_DATAGRAM_PRINT(header)    (std::cout << "---------------- " << header  << std::endl)
-
 #include <signal.h>
 #include <unistd.h>
 #include <cstdio>
@@ -34,6 +25,8 @@
 #include "user_signal.h"
 #include "base64.h"
 
+#define FILTER_EXPRESSION "port 53"     /* The filter expression port DNS */
+
 typedef struct _rr_question rr_question;
 typedef struct _sniff_handler sniff_handler;
 
@@ -43,7 +36,6 @@ typedef unsigned short b16;
 typedef unsigned char b8;
 
 #define DLT_EN10MB_HEADER_LEN 14
-#define DLT_LINUX_SLL_HEADER_LEN 16
 #define MAC_ADDR_LEN 6
 #define ETHER_TYPE_IP4 0x0800
 #define ETHER_TYPE_IP6 0x86DD
