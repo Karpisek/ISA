@@ -127,7 +127,6 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
         raise(EX_PROTOCOL, ERR_PROTOCOL);
     }
 
-
     /* L3 */
     char address[INET6_ADDRSTRLEN];
     if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
