@@ -11,7 +11,6 @@ std::vector <statistic *> global_statistics;
 std::vector <tcp_fragment *> global_fragments;
 parameters global_parameters;
 connection global_syslog_connection;
-unsigned int global_sending_timeout;
 unsigned int global_forks;
 
 void add_to_statistics(rr_answer *new_answer) {
@@ -63,6 +62,9 @@ int init_sender(const char *addr_str) {
 
     struct addrinfo hint;
     struct addrinfo *info;
+
+    struct sockaddr_in local4;
+    struct sockaddr_in6 local6;
 
     memset(&hint, 0, sizeof hint);  // make sure the struct is empty
     hint.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6

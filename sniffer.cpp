@@ -241,6 +241,10 @@ udp_protocol* process_upd_header(const b8 *packet) {
 }
 
 bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6, char *src_address) {
+    if(!global_parameters.fragmentation.defined) {
+        return false;
+    }
+
     tcp = (tcp_protocol *) *packet;
     auto seq = ntohl(tcp->seq);
 
@@ -262,10 +266,6 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
 
     if(data_len == 0) {
         return false;
-    }
-
-    if(!global_parameters.fragmentation.defined) {
-        return TCP_PUSH_FLAG(tcp->flags) == 1;
     }
 
     tcp_fragment *fragment = get_tcp_fragment(tcp, src_address);
