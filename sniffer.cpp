@@ -82,6 +82,7 @@ int sniff(sniff_handler *handler) {
                 print_statistics(0);
             }
 
+            while (global_forks != 0);  //active waiting untill all forked proccesses do their work
             raise(EX_PROTOCOL, ERR_SNIFFING);
         }
         catch (std::exception& e) {
