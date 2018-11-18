@@ -80,7 +80,28 @@ int init_sender(const char *addr_str) {
         raise(EX_NOHOST, ERR_SOCKET);
     }
 
-    global_syslog_connection = {true, socket_fd, info};
+    /* getting dynamic IP address (for hostname in syslog message) */
+    ifaddrs *all_addr, *curr_addr;
+    getifaddrs(&all_addr);
+
+    char address[INET6_ADDRSTRLEN];
+
+    for(curr_addr = all_addr; curr_addr != nullptr; curr_addr = curr_addr->ifa_next) {
+        if(curr_addr->ifa_addr->sa_family == info->ai_family) {
+            std::string dev = std::string(curr_addr->ifa_name);
+            if( dev == "enp0s3" || dev == "en0"  || dev == "lo" || dev == "lo0") {
+
+                if(info->ai_family == AF_INET) {
+                    inet_ntop(AF_INET, &((struct sockaddr_in *)curr_addr->ifa_addr)->sin_addr, address, INET_ADDRSTRLEN);
+                }
+                else {
+                    inet_ntop(AF_INET6, &((struct sockaddr_in6 *)curr_addr->ifa_addr)->sin6_addr, address, INET6_ADDRSTRLEN);
+                }
+            }
+        }
+    }
+
+    global_syslog_connection = {true, socket_fd, info, address};
 
     return 0;
 }
@@ -320,6 +341,11 @@ std::string generate_syslog_header() {
     char hostname_str[HOSTNAME_STR_BUFFER_SIZE];
     gethostname(hostname_str, HOSTNAME_STR_BUFFER_SIZE);
 
+    std::string hostname_syslog = global_syslog_connection.local_address;
+    if(hostname_syslog == "") {
+        hostname_syslog = hostname_str;
+    }
+
     /* structured data is NILVALUE */
     std::string structured_data = NIL_VALUE;
 
@@ -329,7 +355,7 @@ std::string generate_syslog_header() {
     return_string += " ";
     return_string += timestamp_str;
     return_string += " ";
-    return_string += hostname_str;
+    return_string += hostname_syslog;
     return_string += " ";
     return_string += APP_NAME;
     return_string += " ";

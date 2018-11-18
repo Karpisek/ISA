@@ -17,6 +17,8 @@
 #include <sys/time.h>
 #include <cmath>
 #include <ifaddrs.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
 
 #include "records.h"
 #include "error.h"
@@ -41,6 +43,7 @@ struct _connection {
     bool enstablished;
     int connection;
     addrinfo *info;
+    std::string local_address;
 };
 
 struct _statistic {
