@@ -12,6 +12,7 @@ std::vector <tcp_fragment *> global_fragments;
 parameters global_parameters;
 connection global_syslog_connection;
 unsigned int global_sending_timeout;
+unsigned int global_forks;
 
 void add_to_statistics(rr_answer *new_answer) {
     if(new_answer == nullptr) {

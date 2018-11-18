@@ -75,7 +75,7 @@ struct _parameters {
     argument help;
 };
 
-extern unsigned int global_sending_timeout;
+extern unsigned int global_forks;
 extern std::vector <statistic *> global_statistics;
 extern std::vector <tcp_fragment *> global_fragments;
 extern connection global_syslog_connection;

@@ -33,14 +33,13 @@ int main(int argc, char **argv) {
             global_parameters.timeout.value.i = DEFAULT_TIMEOUT;
         }
 
-        global_sending_timeout = (unsigned int) global_parameters.timeout.value.i;
 
         /* setting up syslog server */
         if(global_parameters.server.defined) {
             init_sender(global_parameters.server.value.str);
 
             /* setting alarm to sending data to server */
-            alarm(global_sending_timeout);
+            alarm((unsigned) global_parameters.timeout.value.i);
         }
 
         /* starts sniffing on targeted device */

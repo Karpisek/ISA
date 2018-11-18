@@ -91,6 +91,8 @@ int sniff(sniff_handler *handler) {
 
     pcap_close(session);
 
+    while (global_forks != 0);  //active waiting untill all forked proccesses do their work
+
     return 0;
 }
 

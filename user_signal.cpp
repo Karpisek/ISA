@@ -5,11 +5,18 @@
 #include <sys/time.h>
 #include "user_signal.h"
 
+void program_can_end_signal(int signum) {
+    (void) signum;
+
+    global_forks--;
+}
+
 void print_statistics(int signum) {
     (void) signum; //in this project unused parameter
 
     int pid;
     pid = fork();
+    global_forks++;
 
     if(pid == 0) {
         for(auto stat: global_statistics) {
@@ -21,7 +28,7 @@ void print_statistics(int signum) {
     }
 
     /* ignoring signal */
-    signal(SIGCHLD, SIG_IGN);
+    signal(SIGCHLD, program_can_end_signal);
 }
 
 void timeout_signal(int signum) {
@@ -29,6 +36,7 @@ void timeout_signal(int signum) {
 
     int pid;
     pid = fork();
+    global_forks++;
 
     if(pid == 0) {
         send_statistics();
@@ -36,10 +44,10 @@ void timeout_signal(int signum) {
     }
 
     /* ignoring signal */
-    signal(SIGCHLD, SIG_IGN);
+    signal(SIGCHLD, program_can_end_signal);
 
     /* setting up periodic alarm */
-    alarm(global_sending_timeout);
+    alarm((unsigned) global_parameters.timeout.value.i);
 }
 
 void close_signal(int signum) {
