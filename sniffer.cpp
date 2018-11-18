@@ -270,7 +270,7 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
     if(fragment->seq != seq) {
         return false;
     }
-    std::cout << data_len << std::endl;
+
     for (int i = 0; i < data_len; i++) {
         fragment->packet[fragment->last] = **packet;
         fragment->last++;
