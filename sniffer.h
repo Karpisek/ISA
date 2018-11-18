@@ -361,12 +361,13 @@ ethernet_protocol* process_ether_header(const b8 **packet);
 ethernet_protocol* process_linux_ether_header(const b8 **packet);
 
 /* L3 header processing */
-ip4_protocol* process_ip4_header(const b8 *packet);
-ip6_protocol* process_ip6_header(const b8 *packet);
+ip4_protocol* process_ip4_header(const b8 *packet, char *address);
+ip6_protocol* process_ip6_header(const b8 *packet, char *address);
 
 /* L4 header processing */
 udp_protocol* process_upd_header(const b8 *packet);
-bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6);
+bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6, char *src_address);
+tcp_fragment* get_tcp_fragment(tcp_protocol *tcp, char *src_address);
 
 /* L5 header processing */
 dns_protocol* process_dns(const b8 *packet, bool tcp_flag);
@@ -392,7 +393,7 @@ rr_data get_rsig_record(const b8 *packet, const rr_answer *answer, raw_dns_heade
 rr_data get_ds_record(const b8 *packet, const rr_answer *answer);
 rr_data get_nsec_record(const b8 *packet, const rr_answer *answer, raw_dns_header *header);
 
-tcp_fragment* get_tcp_fragment(tcp_protocol *tcp);
+
 
 #endif //ISA_SNIFFER_H
 

@@ -40,7 +40,7 @@ void add_to_statistics(rr_answer *new_answer) {
     delete new_answer;
 }
 
-void remove_tcp_fragment(int id) {
+void remove_tcp_fragment(std::string id) {
     int index = 0;
     for(auto frag : global_fragments) {
         if(frag->id == id) {

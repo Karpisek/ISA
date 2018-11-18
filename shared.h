@@ -49,8 +49,9 @@ struct _statistic {
 };
 
 struct _tcp_fragment {
-    int id;
+    std::string id;
     unsigned char packet[65535];
+    unsigned long seq;
     int last;
 };
 
@@ -82,7 +83,7 @@ extern parameters global_parameters;
 
 /* statistic procedures */
 void add_to_statistics(rr_answer *record);
-void remove_tcp_fragment(int id);
+void remove_tcp_fragment(std::string id);
 
 /* sender procedures */
 int init_sender(const char *addr_str);

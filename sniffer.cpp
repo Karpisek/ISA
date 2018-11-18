@@ -24,6 +24,8 @@ sniff_handler *init_interface(char *dev) {
         raise(EX_NOHOST, ERR_INTERFACE);
     }
 
+    pcap_setdirection(handler->session, PCAP_D_IN);
+
     return handler;
 }
 
@@ -124,9 +126,10 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
 
 
     /* L3 */
+    char address[INET6_ADDRSTRLEN];
     if(ntohs (ethernet->type) ==  ETHER_TYPE_IP4) {
 
-        ip4 = process_ip4_header(packet);
+        ip4 = process_ip4_header(packet, address);
 
         transport_protocol = ip4->prt;
 
@@ -134,7 +137,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
 
     } else if (ntohs (ethernet->type) == ETHER_TYPE_IP6) {
 
-        ip6 = process_ip6_header(packet);
+        ip6 = process_ip6_header(packet, address);
 
         transport_protocol = ip6->next;
 
@@ -153,7 +156,7 @@ void process_packet(u_char *args, const struct pcap_pkthdr *header, const b8 *pa
 
         case PRT_TCP:
             /* if I get false -> tcp is fragmented, process next packet*/
-            if(!process_tcp_header(&packet, tcp, ethernet, ip4, ip6)) {
+            if(!process_tcp_header(&packet, tcp, ethernet, ip4, ip6, address)) {
                 return;
             }
 
@@ -197,7 +200,7 @@ ethernet_protocol* process_linux_ether_header(const b8 **packet) {
     return ethernet;
 }
 
-ip4_protocol* process_ip4_header(const b8 *packet) {
+ip4_protocol* process_ip4_header(const b8 *packet, char *address) {
     ip4_protocol *ip;              /* Ip header       */
 
     /* typecast ip header */
@@ -207,30 +210,19 @@ ip4_protocol* process_ip4_header(const b8 *packet) {
         raise(EX_PROTOCOL, ERR_IP4);
     }
 
-    char buf[INET_ADDRSTRLEN];
-    if(inet_ntop(AF_INET, &ip->dst, buf, INET_ADDRSTRLEN) == nullptr) {
-        raise(EX_PROTOCOL, ERR_IP4);
-    }
-
-    if(inet_ntop(AF_INET, &ip->src, buf, INET_ADDRSTRLEN) == nullptr) {
+    if(inet_ntop(AF_INET, &ip->src, address, INET_ADDRSTRLEN) == nullptr) {
         raise(EX_PROTOCOL, ERR_IP4);
     }
 
     return ip;
 }
 
-ip6_protocol* process_ip6_header(const b8 *packet) {
+ip6_protocol* process_ip6_header(const b8 *packet, char *address) {
     ip6_protocol *ip6;
 
     ip6 = (ip6_protocol *) packet;
 
-    char buf[INET6_ADDRSTRLEN];
-    if(inet_ntop(AF_INET6, &ip6->dst, buf, INET6_ADDRSTRLEN) == nullptr) {
-        raise(EX_PROTOCOL, ERR_IP6);
-    }
-
-    // print IP src address
-    if(inet_ntop(AF_INET6, &ip6->src, buf, INET6_ADDRSTRLEN) == nullptr) {
+    if(inet_ntop(AF_INET6, &ip6->src, address, INET6_ADDRSTRLEN) == nullptr) {
         raise(EX_PROTOCOL, ERR_IP6);
     }
 
@@ -245,12 +237,13 @@ udp_protocol* process_upd_header(const b8 *packet) {
     return udp;
 }
 
-bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6) {
+bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol *eth, ip4_protocol *ip4, ip6_protocol *ip6, char *src_address) {
     if(!global_parameters.fragmentation.defined) {
         return false;
     }
 
     tcp = (tcp_protocol *) *packet;
+    auto seq = ntohl(tcp->seq);
 
     *packet += TCP_HEAD_LEN(tcp->offset_n);
 
@@ -268,11 +261,20 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
 
     data_len -= TCP_HEAD_LEN(tcp->offset_n);
 
-    tcp_fragment *fragment = get_tcp_fragment(tcp);
+    if(data_len == 0) {
+        return false;
+    }
 
+    tcp_fragment *fragment = get_tcp_fragment(tcp, src_address);
+
+    if(fragment->seq != seq) {
+        return false;
+    }
+    std::cout << data_len << std::endl;
     for (int i = 0; i < data_len; i++) {
         fragment->packet[fragment->last] = **packet;
         fragment->last++;
+        fragment->seq++;
         (*packet)++;
     }
 
@@ -285,23 +287,26 @@ bool process_tcp_header(const b8 **packet, tcp_protocol* tcp, ethernet_protocol 
      * and remove from global fragmented packages
      */
     *packet = (b8 *)fragment->packet;
-    remove_tcp_fragment(fragment->id);
+    remove_tcp_fragment(src_address);
 
     return true;
 }
 
-tcp_fragment* get_tcp_fragment(tcp_protocol *tcp) {
+tcp_fragment* get_tcp_fragment(tcp_protocol *tcp, char *src_address) {
 
+    std::string id = src_address;
 
     for(auto frag : global_fragments) {
-        if((unsigned int)frag->id == tcp->ack) {
+        if(frag->id == id) {
             return frag;
         }
     }
 
     auto new_fragment = new tcp_fragment;
-    new_fragment->id = tcp->ack;
-    //new_fragment->initial_seq = tcp->se
+    new_fragment->id = src_address;
+    new_fragment->seq = ntohl(tcp->seq);
+    new_fragment->last = 0;
+
     global_fragments.push_back(new_fragment);
 
     return new_fragment;
